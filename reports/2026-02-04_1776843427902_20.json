@@ -1,0 +1,29 @@
+{
+  "id": "1776843427902_20",
+  "savedAt": "2026-04-22T07:37:07.902Z",
+  "date": "2026-02-04",
+  "author": "養父",
+  "batch1": {
+    "name": "モンシェリ鹿",
+    "qty": "864",
+    "start": "09:00",
+    "end": "17:10",
+    "notes": "真空機を動かし過ぎない！"
+  },
+  "batch2": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "notes": ""
+  },
+  "batch3": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "notes": ""
+  },
+  "semiProduct": "",
+  "otherNotes": ""
+}
