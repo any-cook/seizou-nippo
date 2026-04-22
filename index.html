@@ -457,7 +457,13 @@ function buildForm() {
     return card;
   }
 
-  var authorI = inputEl("author","text",f.author,function(e){ state.form.author=e.target.value; }); authorI.placeholder="氏名を入力";
+  var authorI = el("select",{className:"i-input"});
+  ["","養父","日高"].forEach(function(name){
+    var op = el("option",{value:name},name||"記入者を選択");
+    if (f.author===name) op.selected=true;
+    authorI.appendChild(op);
+  });
+  authorI.addEventListener("change",function(e){ state.form.author=e.target.value; });
   var dateI   = inputEl("date","date",f.date,function(e){ state.form.date=e.target.value; });
   var semiT   = el("textarea",{className:"i-input i-textarea"}); semiT.value=f.semiProduct; semiT.placeholder="例：〇〇 200kg 保管場所：冷蔵庫"; semiT.addEventListener("input",function(e){ state.form.semiProduct=e.target.value; });
   var otherT  = el("textarea",{className:"i-input i-textarea"}); otherT.value=f.otherNotes; otherT.placeholder="設備の異常、原材料の状況など"; otherT.addEventListener("input",function(e){ state.form.otherNotes=e.target.value; });
@@ -633,7 +639,22 @@ function buildAdmin() {
   // フィルター
   var searchI = el("input",{className:"m-search",placeholder:"🔍 日付・記入者・品名で検索…"});
   searchI.value = state.search;
-  searchI.addEventListener("input",function(e){ state.search=e.target.value; render(); });
+  searchI.addEventListener("input",function(e){
+    state.search=e.target.value;
+    // 検索時は全体再描画せずテーブルだけ更新
+    var tableWrap = document.querySelector(".m-table-wrap, .m-empty");
+    if (tableWrap) {
+      var newTable = buildFilteredTable();
+      tableWrap.parentNode.replaceChild(newTable, tableWrap);
+    }
+    // サイドのCSV出力ボタンのカウントも更新
+    var sideBtns = document.querySelectorAll(".m-side-btn");
+    sideBtns.forEach(function(b){
+      if (b.textContent.includes("CSV出力")) {
+        b.textContent = "📥 CSV出力(" + getFiltered().length + "件)";
+      }
+    });
+  });
 
   function makeSelect(val, opts, onChange) {
     var s = el("select",{className:"m-select"});
@@ -642,11 +663,72 @@ function buildAdmin() {
       if (o.v===val) op.selected=true;
       s.appendChild(op);
     });
-    s.addEventListener("change",function(e){ onChange(e.target.value); render(); });
+    s.addEventListener("change",function(e){
+      onChange(e.target.value);
+      var tableWrap = document.querySelector(".m-table-wrap, .m-empty");
+      if (tableWrap) {
+        var newTable = buildFilteredTable();
+        tableWrap.parentNode.replaceChild(newTable, tableWrap);
+      }
+    });
     return s;
   }
   var authorOpts = [{v:"all",t:"全記入者"}].concat(authors.map(function(a){ return {v:a,t:a}; }));
   var monthOpts  = [{v:"all",t:"全期間"}].concat(months.map(function(m){ return {v:m,t:m}; }));
+
+  function buildFilteredTable() {
+    var filtered2 = getFiltered();
+    if (filtered2.length===0) {
+      var empty = el("div",{className:"m-empty"},
+        state.loading?"読み込み中…":state.records.length===0?"まだ日報が保存されていません。「日報入力」タブから入力してください。":"条件に合う記録がありません");
+      return empty;
+    }
+    var thead = el("tr",{style:{background:"#1E3A5F"}});
+    ["製造日","記入者","１釜目","２釜目","３釜目","半製品","その他",""].forEach(function(h){
+      thead.appendChild(el("th",{className:"m-th"},h));
+    });
+    var tbody = el("tbody");
+    filtered2.forEach(function(r,idx) {
+      var tr = el("tr",{style:{cursor:"pointer",background:idx%2===0?"#fff":"#EEF4FB"}});
+      tr.addEventListener("click",function(){ state.detail=r; render(); });
+      tr.appendChild(el("td",{className:"m-td"},[el("b",null,r.date||"―")]));
+      tr.appendChild(el("td",{className:"m-td"},r.author||"―"));
+      BATCH_KEYS.forEach(function(key,i){
+        var b = r[key];
+        var td = el("td",{className:"m-td"});
+        if (b&&b.name) {
+          td.appendChild(el("span",{className:"m-dot",style:{background:BATCH_COLORS[i]}}));
+          td.appendChild(document.createTextNode(b.name));
+          td.appendChild(el("br"));
+          td.appendChild(el("span",{className:"m-small"},b.qty||""));
+        } else {
+          td.appendChild(el("span",{style:{color:"#bbb"}},"―"));
+        }
+        tr.appendChild(td);
+      });
+      tr.appendChild(el("td",{className:"m-td-clamp"},r.semiProduct||"―"));
+      tr.appendChild(el("td",{className:"m-td-clamp"},r.otherNotes||"―"));
+      var actionTd = el("td",{className:"m-td",style:{whiteSpace:"nowrap"}});
+      actionTd.addEventListener("click",function(e){ e.stopPropagation(); });
+      var vBtn = el("button",{className:"m-view-btn"},"詳細");
+      vBtn.addEventListener("click",function(){ state.detail=r; render(); });
+      var dBtn = el("button",{className:"m-del-btn"},"削除");
+      dBtn.addEventListener("click",function(){
+        if (!confirm("この記録を削除しますか？")) return;
+        ghDelete(r).then(function(){
+          state.records = state.records.filter(function(x){ return x.id!==r.id; });
+          render();
+        }).catch(function(e){ alert("削除失敗: "+e.message); });
+      });
+      actionTd.appendChild(vBtn); actionTd.appendChild(dBtn);
+      tr.appendChild(actionTd);
+      tbody.appendChild(tr);
+    });
+    var wrap = el("div",{className:"m-table-wrap"},[
+      el("table",{className:"m-table"},[el("thead",null,[thead]),tbody])
+    ]);
+    return wrap;
+  }
 
   // テーブル
   var tableContent;
