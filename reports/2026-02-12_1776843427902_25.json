@@ -1,0 +1,29 @@
+{
+  "id": "1776843427902_25",
+  "savedAt": "2026-04-22T07:37:07.902Z",
+  "date": "2026-02-12",
+  "author": "養父",
+  "batch1": {
+    "name": "モンシェリ馬",
+    "qty": "860",
+    "start": "09:00",
+    "end": "14:00",
+    "notes": "トレーが少なかった"
+  },
+  "batch2": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "notes": ""
+  },
+  "batch3": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "notes": ""
+  },
+  "semiProduct": "",
+  "otherNotes": ""
+}
