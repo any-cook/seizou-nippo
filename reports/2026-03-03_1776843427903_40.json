@@ -1,0 +1,29 @@
+{
+  "id": "1776843427903_40",
+  "savedAt": "2026-04-22T07:37:07.903Z",
+  "date": "2026-03-03",
+  "author": "日高",
+  "batch1": {
+    "name": "トリメシ大",
+    "qty": "812",
+    "start": "09:00",
+    "end": "15:30",
+    "notes": "特になし"
+  },
+  "batch2": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "notes": ""
+  },
+  "batch3": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "notes": ""
+  },
+  "semiProduct": "",
+  "otherNotes": ""
+}
