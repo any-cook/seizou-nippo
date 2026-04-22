@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>製造日報システム</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Hiragino Mincho ProN','Yu Mincho',Georgia,serif; background: #F5EDD6; }
+  input, textarea, select, button { font-family: inherit; }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+
+// ─── GitHub設定 ───────────────────────────────────────────────
+const GH_OWNER  = "fukufuku01";
+const GH_REPO   = "seizou-nippo";   // ★変更済み
+const GH_BRANCH = "main";
+// ─────────────────────────────────────────────────────────────
+
+const BATCH_LABELS = ["１釜目","２釜目","３釜目"];
+const BATCH_KEYS   = ["batch1","batch2","batch3"];
+const BATCH_COLORS = ["#C0392B","#1F618D","#1E8449"];
+const initialBatch = { name:"", qty:"", start:"", end:"", notes:"" };
+const initialForm  = {
+  author:"", date:"",
+  batch1:{...initialBatch}, batch2:{...initialBatch}, batch3:{...initialBatch},
+  semiProduct:"", otherNotes:""
+};
+
+const A_ACCENT="#D4622A", A_DARK="#1A1208", A_WARM="#F5EDD6", A_MID="#8B6A3E";
+const M_ACCENT="#1E3A5F", M_LIGHT="#EEF4FB", M_DARK="#0D1B2A", M_MID="#5B7A99", M_BORDER="#C5D5E8";
+
+// ─── GitHub API ───────────────────────────────────────────────
+function getToken() { return localStorage.getItem("gh_token") || ""; }
+
+function toBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = ""; bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+
+async function ghRequest(url, method="GET", body=null) {
+  const token = getToken();
+  const opts = {
+    method,
+    headers: {
+      "Authorization": `token ${token}`,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    }
+  };
+  if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+  const res = await fetch(url, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    let msg = data.message || res.statusText;
+    if (res.status===401) msg = "Token認証失敗(401)：Tokenを確認してください";
+    if (res.status===403) msg = "権限不足(403)：TokenのContents権限をRead and writeにしてください";
+    if (res.status===404) msg = "リポジトリが見つかりません(404)：リポジトリ名を確認してください";
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function ghTestConnection() {
+  return await ghRequest(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}`);
+}
+
+async function ghLoadRecords() {
+  try {
+    const files = await ghRequest(
+      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/reports?ref=${GH_BRANCH}`
+    );
+    if (!Array.isArray(files)) return [];
+    const jsonFiles = files.filter(f => f.name.endsWith(".json"));
+    const records = await Promise.all(jsonFiles.map(async f => {
+      try {
+        const res = await fetch(f.download_url, { headers:{ "Authorization":`token ${getToken()}` } });
+        return await res.json();
+      } catch { return null; }
+    }));
+    return records.filter(Boolean).sort((a,b) => (b.date||"").localeCompare(a.date||""));
+  } catch(e) {
+    if (e.message.includes("404")) return [];
+    throw e;
+  }
+}
+
+async function ghSaveRecord(record) {
+  const date = record.date || new Date().toISOString().slice(0,10);
+  const path = `reports/${date}_${record.id}.json`;
+  const url  = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`;
+  const content = toBase64(JSON.stringify(record, null, 2));
+  let sha;
+  try { const ex = await ghRequest(url); sha = ex.sha; } catch(e) { if (!e.message.includes("404")) throw e; }
+  return await ghRequest(url, "PUT", {
+    message: `日報: ${date} (${record.author||"不明"})`,
+    content, branch: GH_BRANCH,
+    ...(sha ? { sha } : {})
+  });
+}
+
+async function ghDeleteRecord(record) {
+  const date = record.date || "unknown";
+  const path = `reports/${date}_${record.id}.json`;
+  const url  = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`;
+  const { sha } = await ghRequest(url);
+  return await ghRequest(url, "DELETE", {
+    message: `日報削除: ${date}`, sha, branch: GH_BRANCH
+  });
+}
+
+// ─── CSV ──────────────────────────────────────────────────────
+function toCSV(records) {
+  const header = ["製造日","記入者","保存日時",
+    "１釜目_品名","１釜目_製造数","１釜目_開始","１釜目_終了","１釜目_備考",
+    "２釜目_品名","２釜目_製造数","２釜目_開始","２釜目_終了","２釜目_備考",
+    "３釜目_品名","３釜目_製造数","３釜目_開始","３釜目_終了","３釜目_備考",
+    "半製品","その他"];
+  const rows = records.map(r => [
+    r.date, r.author, r.savedAt,
+    ...BATCH_KEYS.flatMap(k => [r[k]?.name, r[k]?.qty, r[k]?.start, r[k]?.end, r[k]?.notes]),
+    r.semiProduct, r.otherNotes
+  ].map(v => `"${(v||"").replace(/"/g,'""')}"`));
+  return "\uFEFF" + [header,...rows].map(r => r.join(",")).join("\n");
+}
+function downloadCSV(records) {
+  const blob = new Blob([toCSV(records)], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url; a.download=`nippo_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ─── Root ─────────────────────────────────────────────────────
+function App() {
+  const [token, setToken]   = useState(localStorage.getItem("gh_token")||"");
+  const [authed, setAuthed] = useState(false);
+  const [mode, setMode]     = useState("input");
+
+  useEffect(() => { if (token) localStorage.setItem("gh_token", token); }, [token]);
+
+  if (!authed || !token) return (
+    <LoginPage token={token} setToken={setToken} onLogin={() => setAuthed(true)} />
+  );
+
+  return (
+    <div>
+      <div className="no-print" style={tab.bar}>
+        <div style={tab.logo}>📋 製造日報システム</div>
+        <button style={{...tab.btn,...(mode==="input"?tab.active:{})}} onClick={()=>setMode("input")}>✏️ 日報入力</button>
+        <button style={{...tab.btn,...(mode==="admin"?tab.active:{})}} onClick={()=>setMode("admin")}>🗂️ 管理画面</button>
+        <button style={tab.logout} onClick={()=>{localStorage.removeItem("gh_token");setToken("");setAuthed(false);}}>🔓 ログアウト</button>
+      </div>
+      {mode==="input" ? <InputApp /> : <AdminApp />}
+    </div>
+  );
+}
+
+// ─── Login Page ───────────────────────────────────────────────
+function LoginPage({ token, setToken, onLogin }) {
+  const [testing, setTesting] = useState(false);
+  const [msg, setMsg]         = useState("");
+
+  const handleLogin = async () => {
+    if (!token) { setMsg("err:Tokenを入力してください"); return; }
+    setTesting(true); setMsg("");
+    try {
+      const data = await ghTestConnection();
+      setMsg(`ok:接続成功！「${data.full_name}」に接続しました ✅`);
+      setTimeout(() => onLogin(), 800);
+    } catch(e) { setMsg(`err:${e.message}`); }
+    setTesting(false);
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:A_WARM,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{width:"100%",maxWidth:440,padding:"0 16px"}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:48,marginBottom:8}}>📋</div>
+          <h1 style={{fontSize:22,color:A_DARK,fontWeight:700}}>製造日報システム</h1>
+          <p style={{color:A_MID,fontSize:13,marginTop:6}}>GitHub Token を入力してログインしてください</p>
+        </div>
+        <div style={{background:"#fffdf5",border:`1px solid #d8c89a`,borderRadius:6,padding:24,boxShadow:"2px 2px 0 #d8c89a"}}>
+          <div style={{background:"#e8f0fe",border:"1px solid #90b4f5",borderRadius:4,padding:"10px 14px",fontSize:12,color:"#1a3a6e",lineHeight:1.8,marginBottom:16}}>
+            <b>接続先リポジトリ：</b><br/>
+            github.com/<b>{GH_OWNER}</b>/<b>{GH_REPO}</b>
+          </div>
+          <label style={{display:"block",fontSize:11,color:A_MID,letterSpacing:"0.08em",marginBottom:6}}>Personal Access Token</label>
+          <input
+            type="password"
+            style={{width:"100%",padding:"10px 12px",border:`1px solid #c8b47a`,borderRadius:4,fontSize:14,outline:"none",marginBottom:14,background:"#fffef8"}}
+            value={token}
+            onChange={e => setToken(e.target.value.trim())}
+            placeholder="github_pat_xxxxxxxxxxxx"
+            onKeyDown={e => e.key==="Enter" && handleLogin()}
+          />
+          {msg && <MsgBar msg={msg} />}
+          <button
+            style={{width:"100%",padding:"13px 0",background:A_DARK,color:A_WARM,border:"none",borderRadius:4,cursor:"pointer",fontSize:15,fontWeight:700,opacity:testing?0.7:1}}
+            onClick={handleLogin} disabled={testing}>
+            {testing ? "確認中…" : "ログイン →"}
+          </button>
+          <div style={{marginTop:14,padding:"10px 14px",background:"#f0f7f0",border:"1px solid #a5d6a7",borderRadius:4,fontSize:11,color:"#1b5e20",lineHeight:1.9}}>
+            <b>Tokenの発行方法：</b><br/>
+            GitHub → Settings → Developer settings<br/>
+            → Fine-grained tokens → Generate new token<br/>
+            → Repository access：<b>seizou-nippo</b> を選択<br/>
+            → Permissions → Contents：<b>Read and write</b>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Input App ────────────────────────────────────────────────
+function InputApp() {
+  const [page, setPage]     = useState("form");
+  const [form, setForm]     = useState(initialForm);
+  const [submitted, setSub] = useState(null);
+  const [msg, setMsg]       = useState("");
+  const [loading, setLoad]  = useState(false);
+
+  const showMsg = (m, ms=5000) => { setMsg(m); setTimeout(()=>setMsg(""),ms); };
+  const handleTop   = e => setForm(f=>({...f,[e.target.name]:e.target.value}));
+  const handleBatch = (key,field,val) => setForm(f=>({...f,[key]:{...f[key],[field]:val}}));
+
+  const handleConfirm = () => {
+    const record = {...form, savedAt:new Date().toISOString(), id:Date.now().toString()};
+    setSub(record); setPage("preview");
+  };
+
+  const handleSave = async () => {
+    setLoad(true);
+    try {
+      await ghSaveRecord(submitted);
+      showMsg("ok:GitHubに保存しました ✅　管理画面から確認できます");
+    } catch(e) { showMsg(`err:保存失敗 → ${e.message}`); }
+    setLoad(false);
+  };
+
+  if (page==="preview") return (
+    <div style={ia.root}><div style={ia.container}>
+      <IHeader title="確認・保存" sub="CONFIRM &amp; SAVE">
+        <button className="no-print" style={ia.iconBtn} onClick={()=>setPage("form")}>← 修正</button>
+      </IHeader>
+      {msg && <MsgBar msg={msg} />}
+      <div style={ia.previewMeta}>
+        <span><b>記入者：</b>{submitted.author||"―"}</span>
+        <span><b>製造日：</b>{submitted.date||"―"}</span>
+      </div>
+      {BATCH_KEYS.map((key,i)=>(
+        <div key={key} style={{...ia.card,borderLeft:`4px solid ${BATCH_COLORS[i]}`}}>
+          <div style={ia.cardHeader}><span style={{...ia.batchBadge,background:BATCH_COLORS[i]}}>{BATCH_LABELS[i]}</span></div>
+          <PvTable b={submitted[key]} />
+        </div>
+      ))}
+      <div style={ia.card}><ISHead title="半製品"/><p style={ia.pvText}>{submitted.semiProduct||"記載なし"}</p></div>
+      <div style={ia.card}><ISHead title="その他気づいた点"/><p style={ia.pvText}>{submitted.otherNotes||"記載なし"}</p></div>
+      <div className="no-print" style={ia.saveBox}>
+        <button style={{...ia.saveBtn,opacity:loading?0.6:1}} onClick={handleSave} disabled={loading}>
+          {loading ? "保存中…" : "💾 GitHubに保存する（管理画面に反映）"}
+        </button>
+      </div>
+      <div className="no-print" style={{display:"flex",gap:10,marginBottom:10}}>
+        <button style={ia.backBtn} onClick={()=>setPage("form")}>← 修正する</button>
+        <button style={ia.printBtn} onClick={()=>window.print()}>🖨️ 印刷</button>
+      </div>
+      <button className="no-print" style={ia.newBtn} onClick={()=>{setForm(initialForm);setSub(null);setPage("form");}}>＋ 新しい日報を入力する</button>
+    </div></div>
+  );
+
+  return (
+    <div style={ia.root}><div style={ia.container}>
+      <IHeader title="製造日報" sub="DAILY PRODUCTION REPORT" />
+      {msg && <MsgBar msg={msg} />}
+      <div style={ia.metaRow}>
+        <IField label="記入者" style={{flex:1}}>
+          <input style={ia.input} name="author" value={form.author} onChange={handleTop} placeholder="氏名を入力" />
+        </IField>
+        <IField label="製造日" style={{flex:1}}>
+          <input style={ia.input} type="date" name="date" value={form.date} onChange={handleTop} />
+        </IField>
+      </div>
+      {BATCH_KEYS.map((key,i)=>(
+        <IBatchCard key={key} label={BATCH_LABELS[i]} index={i} data={form[key]}
+          onChange={(f,v)=>handleBatch(key,f,v)} />
+      ))}
+      <div style={ia.card}><ISHead title="半製品"/>
+        <IField label="半製品があれば入力してください">
+          <textarea style={{...ia.input,...ia.ta}} value={form.semiProduct}
+            onChange={e=>handleTop({target:{name:"semiProduct",value:e.target.value}})}
+            placeholder="例：〇〇　200kg 保管場所：冷蔵庫" />
+        </IField>
+      </div>
+      <div style={ia.card}><ISHead title="その他"/>
+        <IField label="その他気づいた点があれば入力してください">
+          <textarea style={{...ia.input,...ia.ta}} value={form.otherNotes}
+            onChange={e=>handleTop({target:{name:"otherNotes",value:e.target.value}})}
+            placeholder="設備の異常、原材料の状況など" />
+        </IField>
+      </div>
+      <button style={ia.submitBtn} onClick={handleConfirm}>
+        <span style={{fontSize:15,fontWeight:700}}>日報を確認する</span>
+        <span style={{fontSize:18,color:A_ACCENT}}>→</span>
+      </button>
+    </div></div>
+  );
+}
+
+// ─── Admin App ────────────────────────────────────────────────
+function AdminApp() {
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [detail,  setDetail]  = useState(null);
+  const [search,  setSearch]  = useState("");
+  const [filterA, setFA]      = useState("all");
+  const [filterM, setFM]      = useState("all");
+  const [msg,     setMsg]     = useState("");
+
+  const showMsg = (m,ms=3000) => { setMsg(m); setTimeout(()=>setMsg(""),ms); };
+
+  const refresh = async () => {
+    setLoading(true);
+    try { const data = await ghLoadRecords(); setRecords(data); }
+    catch(e) { showMsg(`err:読み込み失敗 → ${e.message}`); }
+    setLoading(false);
+  };
+
+  useEffect(()=>{ refresh(); },[]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("この記録を削除しますか？")) return;
+    const rec = records.find(r=>r.id===id);
+    try {
+      await ghDeleteRecord(rec);
+      setRecords(r=>r.filter(x=>x.id!==id));
+      showMsg("ok:削除しました");
+      if (detail?.id===id) setDetail(null);
+    } catch(e) { showMsg(`err:削除失敗 → ${e.message}`); }
+  };
+
+  const authors = useMemo(()=>[...new Set(records.map(r=>r.author).filter(Boolean))],[records]);
+  const months  = useMemo(()=>[...new Set(records.map(r=>(r.date||"").slice(0,7)).filter(Boolean))].sort().reverse(),[records]);
+  const filtered = useMemo(()=>records.filter(r=>{
+    const q=search.toLowerCase();
+    const ms=!q||(r.author||"").includes(q)||(r.date||"").includes(q)
+      ||BATCH_KEYS.some(k=>(r[k]?.name||"").toLowerCase().includes(q))
+      ||(r.semiProduct||"").includes(q)||(r.otherNotes||"").includes(q);
+    return ms&&(filterA==="all"||r.author===filterA)&&(filterM==="all"||(r.date||"").startsWith(filterM));
+  }),[records,search,filterA,filterM]);
+
+  const thisMonth = new Date().toISOString().slice(0,7);
+
+  if (detail) return (
+    <div style={{minHeight:"calc(100vh - 44px)",background:M_LIGHT,fontFamily:"sans-serif"}}>
+      <div className="no-print" style={{display:"flex",alignItems:"center",gap:10,padding:"12px 20px",background:"#fff",borderBottom:`1px solid ${M_BORDER}`,position:"sticky",top:44,zIndex:10}}>
+        <button style={ma.barBtn} onClick={()=>setDetail(null)}>← 一覧へ</button>
+        <span style={{fontWeight:700,color:M_DARK}}>日報詳細　{detail.date}</span>
+        <button style={ma.printBtn} onClick={()=>window.print()}>🖨️ 印刷</button>
+        <button style={ma.delBtnSm} onClick={()=>handleDelete(detail.id)}>🗑️ 削除</button>
+      </div>
+      {msg && <div style={{padding:"8px 20px"}}><MsgBar msg={msg}/></div>}
+      <div style={{maxWidth:700,margin:"0 auto",padding:"20px 16px"}}>
+        <div style={ma.dmeta}>
+          <span><b>記入者：</b>{detail.author||"―"}</span>
+          <span><b>製造日：</b>{detail.date||"―"}</span>
+          <span style={{marginLeft:"auto",fontSize:11,color:M_MID}}>保存：{new Date(detail.savedAt).toLocaleString("ja-JP")}</span>
+        </div>
+        <RecordDetail data={detail} admin />
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{display:"flex",minHeight:"calc(100vh - 44px)",fontFamily:"sans-serif",background:M_LIGHT}}>
+      <div className="no-print" style={{width:200,flexShrink:0,background:M_DARK,display:"flex",flexDirection:"column",padding:"20px 0 24px",gap:20}}>
+        <div style={{color:"#a8c4e0",fontSize:11,letterSpacing:"0.2em",textTransform:"uppercase",padding:"0 16px"}}>管理画面</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8,padding:"0 12px"}}>
+          <StatBox label="総件数" val={records.length}/>
+          <StatBox label="今月" val={records.filter(r=>(r.date||"").startsWith(thisMonth)).length}/>
+          <StatBox label="記入者数" val={authors.length}/>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:4,padding:"0 8px"}}>
+          <SideBtn icon="🔄" label="最新に更新" onClick={refresh}/>
+          <SideBtn icon="📥" label={`CSV出力(${filtered.length}件)`} onClick={()=>downloadCSV(filtered)}/>
+        </div>
+        {msg && <div style={{padding:"0 12px"}}><MsgBar msg={msg}/></div>}
+      </div>
+      <div style={{flex:1,overflow:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 20px 12px",borderBottom:`1px solid ${M_BORDER}`,background:"#fff"}}>
+          <h2 style={{margin:0,fontSize:17,fontWeight:700,color:M_DARK}}>日報一覧</h2>
+          {loading && <span style={{fontSize:12,color:M_MID,background:M_LIGHT,padding:"3px 10px",borderRadius:12}}>読み込み中…</span>}
+        </div>
+        <div style={{display:"flex",gap:8,padding:"10px 20px",background:"#fff",borderBottom:`1px solid ${M_BORDER}`,flexWrap:"wrap"}}>
+          <input style={{flex:2,minWidth:140,padding:"7px 10px",border:`1px solid ${M_BORDER}`,borderRadius:4,fontSize:13,outline:"none"}}
+            placeholder="🔍 日付・記入者・品名で検索…" value={search} onChange={e=>setSearch(e.target.value)} />
+          <select style={{flex:1,minWidth:90,padding:"7px 8px",border:`1px solid ${M_BORDER}`,borderRadius:4,fontSize:12,background:"#fff",outline:"none"}}
+            value={filterA} onChange={e=>setFA(e.target.value)}>
+            <option value="all">全記入者</option>
+            {authors.map(a=><option key={a} value={a}>{a}</option>)}
+          </select>
+          <select style={{flex:1,minWidth:90,padding:"7px 8px",border:`1px solid ${M_BORDER}`,borderRadius:4,fontSize:12,background:"#fff",outline:"none"}}
+            value={filterM} onChange={e=>setFM(e.target.value)}>
+            <option value="all">全期間</option>
+            {months.map(m=><option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        {filtered.length===0 ? (
+          <div style={{padding:"60px 20px",textAlign:"center",color:M_MID,fontSize:14}}>
+            {loading?"読み込み中…":records.length===0?"まだ日報が保存されていません。「日報入力」タブから入力してください。":"条件に合う記録がありません"}
+          </div>
+        ) : (
+          <div style={{padding:"14px 20px",overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+              <thead>
+                <tr style={{background:M_ACCENT}}>
+                  {["製造日","記入者","１釜目","２釜目","３釜目","半製品","その他",""].map(h=>(
+                    <th key={h} style={{padding:"9px 10px",color:"#fff",fontWeight:700,textAlign:"left",fontSize:11,whiteSpace:"nowrap"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r,idx)=>(
+                  <tr key={r.id} style={{cursor:"pointer",background:idx%2===0?"#fff":M_LIGHT}} onClick={()=>setDetail(r)}>
+                    <td style={ma.td}><b>{r.date||"―"}</b></td>
+                    <td style={ma.td}>{r.author||"―"}</td>
+                    {BATCH_KEYS.map((key,i)=>(
+                      <td key={key} style={ma.td}>
+                        {r[key]?.name
+                          ? <><span style={{display:"inline-block",width:7,height:7,borderRadius:"50%",marginRight:4,background:BATCH_COLORS[i]}}/>{r[key].name}<br/><span style={{fontSize:11,color:M_MID}}>{r[key].qty}</span></>
+                          : <span style={{color:"#bbb"}}>―</span>}
+                      </td>
+                    ))}
+                    <td style={{...ma.td,maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:12,color:M_MID}}>{r.semiProduct||"―"}</td>
+                    <td style={{...ma.td,maxWidth:100,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:12,color:M_MID}}>{r.otherNotes||"―"}</td>
+                    <td style={{...ma.td,whiteSpace:"nowrap"}} onClick={e=>e.stopPropagation()}>
+                      <button style={ma.viewBtn} onClick={()=>setDetail(r)}>詳細</button>
+                      <button style={ma.delBtn} onClick={()=>handleDelete(r.id)}>削除</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── 共通コンポーネント ───────────────────────────────────────
+function RecordDetail({ data, admin }) {
+  const c = admin ? M_MID : A_MID;
+  const cardSt = admin
+    ? {background:"#fff",border:`1px solid ${M_BORDER}`,borderRadius:4,padding:"14px 18px",marginBottom:12}
+    : {...ia.card};
+  return (
+    <>
+      {BATCH_KEYS.map((key,i)=>{
+        const b = data[key];
+        return (
+          <div key={key} style={{...cardSt,borderLeft:`4px solid ${BATCH_COLORS[i]}`}}>
+            <div style={{marginBottom:10}}>
+              <span style={{background:BATCH_COLORS[i],color:"#fff",fontSize:12,fontWeight:700,padding:"3px 12px",borderRadius:2}}>{BATCH_LABELS[i]}</span>
+            </div>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><tbody>
+              {[["品名",b.name],["製造数",b.qty],["開始時間",b.start],["終了時間",b.end],["気が付いた点",b.notes]].map(([l,v])=>(
+                <tr key={l}>
+                  <td style={{padding:"4px 10px 4px 0",color:c,fontWeight:700,fontSize:12,width:100,verticalAlign:"top"}}>{l}</td>
+                  <td style={{padding:"4px 0",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{v||"―"}</td>
+                </tr>
+              ))}
+            </tbody></table>
+          </div>
+        );
+      })}
+      <div style={cardSt}><div style={{fontWeight:700,color:c,fontSize:12,marginBottom:6}}>▸ 半製品</div><p style={{margin:0,lineHeight:1.7}}>{data.semiProduct||"記載なし"}</p></div>
+      <div style={cardSt}><div style={{fontWeight:700,color:c,fontSize:12,marginBottom:6}}>▸ その他気づいた点</div><p style={{margin:0,lineHeight:1.7}}>{data.otherNotes||"記載なし"}</p></div>
+    </>
+  );
+}
+
+function IHeader({ title, sub, children }) {
+  return (
+    <div style={ia.header}>
+      <div style={ia.headerAccent}/>
+      <div style={{flex:1}}>
+        <div style={ia.headerLabel}>{sub}</div>
+        <h1 style={ia.title}>{title}</h1>
+      </div>
+      {children}
+    </div>
+  );
+}
+function IBatchCard({ label, index, data, onChange }) {
+  return (
+    <div style={{...ia.card,borderLeft:`4px solid ${BATCH_COLORS[index]}`}}>
+      <div style={ia.cardHeader}><span style={{...ia.batchBadge,background:BATCH_COLORS[index]}}>{label}</span></div>
+      <div style={ia.gridTwo}>
+        <IField label="品名"><input style={ia.input} value={data.name} onChange={e=>onChange("name",e.target.value)} placeholder="製品名"/></IField>
+        <IField label="製造数"><input style={ia.input} value={data.qty} onChange={e=>onChange("qty",e.target.value)} placeholder="例：150kg"/></IField>
+        <IField label="開始時間"><input style={ia.input} type="time" value={data.start} onChange={e=>onChange("start",e.target.value)}/></IField>
+        <IField label="終了時間"><input style={ia.input} type="time" value={data.end} onChange={e=>onChange("end",e.target.value)}/></IField>
+      </div>
+      <IField label="製造時、気が付いた点">
+        <textarea style={{...ia.input,...ia.ta}} value={data.notes} onChange={e=>onChange("notes",e.target.value)} placeholder="温度異常、異臭、設備不具合など"/>
+      </IField>
+    </div>
+  );
+}
+function ISHead({ title }) {
+  return <div style={ia.cardHeader}><span style={{color:A_ACCENT,fontSize:14}}>▸</span><span style={{fontSize:14,fontWeight:700,color:A_DARK}}>{title}</span></div>;
+}
+function IField({ label, children, style }) {
+  return <div style={{marginBottom:12,...style}}><label style={ia.label}>{label}</label>{children}</div>;
+}
+function PvTable({ b }) {
+  return (
+    <table style={ia.pvTable}><tbody>
+      {[["品名",b.name],["製造数",b.qty],["開始時間",b.start],["終了時間",b.end],["気が付いた点",b.notes]].map(([l,v])=>(
+        <tr key={l}><td style={ia.tdLabel}>{l}</td><td style={ia.tdVal}>{v||"―"}</td></tr>
+      ))}
+    </tbody></table>
+  );
+}
+function StatBox({ label, val }) {
+  return (
+    <div style={{background:"#1e3a5f",borderRadius:6,padding:"10px 12px"}}>
+      <div style={{fontSize:22,fontWeight:700,color:"#fff"}}>{val}</div>
+      <div style={{fontSize:10,color:M_MID,letterSpacing:"0.1em",textTransform:"uppercase"}}>{label}</div>
+    </div>
+  );
+}
+function SideBtn({ icon, label, onClick }) {
+  return (
+    <button style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",background:"transparent",border:"none",color:"#a8c4e0",cursor:"pointer",fontSize:12,fontFamily:"inherit",borderRadius:4,textAlign:"left",width:"100%"}} onClick={onClick}>{icon} {label}</button>
+  );
+}
+function MsgBar({ msg }) {
+  const isOk = msg.startsWith("ok:");
+  const text = msg.replace(/^[a-z]+:/,"");
+  return (
+    <div style={{padding:"9px 14px",borderRadius:4,border:"1.5px solid",fontSize:13,marginBottom:12,
+      background:isOk?"#e8f5e9":"#fdecea",borderColor:isOk?"#81c784":"#e57373",
+      color:isOk?"#2e7d32":"#c62828",fontWeight:700,lineHeight:1.5}}>{text}</div>
+  );
+}
+
+const tab = {
+  bar:    {display:"flex",alignItems:"center",background:"#1A1208",padding:"0 16px",gap:4,position:"sticky",top:0,zIndex:100},
+  logo:   {color:"#d8c89a",fontSize:13,fontWeight:700,marginRight:"auto",padding:"12px 0"},
+  btn:    {padding:"12px 16px",background:"transparent",border:"none",color:"#8B6A3E",cursor:"pointer",fontSize:13,fontFamily:"inherit",borderBottom:"3px solid transparent"},
+  active: {color:"#F5EDD6",borderBottom:"3px solid #D4622A"},
+  logout: {padding:"8px 12px",background:"transparent",border:"1px solid #8B6A3E",color:"#8B6A3E",cursor:"pointer",fontSize:11,borderRadius:3,fontFamily:"inherit"},
+};
+const ia = {
+  root:        {minHeight:"calc(100vh - 44px)",background:A_WARM,paddingBottom:48},
+  container:   {maxWidth:680,margin:"0 auto",padding:"0 16px"},
+  header:      {display:"flex",alignItems:"center",gap:12,padding:"22px 0 14px",borderBottom:`2px solid ${A_DARK}`,marginBottom:18},
+  headerAccent:{width:6,height:46,background:A_ACCENT,borderRadius:2,flexShrink:0},
+  headerLabel: {fontSize:10,letterSpacing:"0.25em",color:A_MID,textTransform:"uppercase",marginBottom:2},
+  title:       {margin:0,fontSize:20,fontWeight:700,color:A_DARK},
+  iconBtn:     {padding:"6px 12px",background:"#fffdf5",border:`1.5px solid #c8b47a`,borderRadius:3,cursor:"pointer",fontSize:12,color:A_DARK},
+  metaRow:     {display:"flex",gap:16,marginBottom:8},
+  card:        {background:"#fffdf5",border:`1px solid #d8c89a`,borderLeft:`4px solid ${A_MID}`,borderRadius:4,padding:"14px 18px",marginBottom:12,boxShadow:"2px 2px 0 #d8c89a"},
+  cardHeader:  {display:"flex",alignItems:"center",gap:10,marginBottom:10},
+  batchBadge:  {color:"#fff",fontSize:12,fontWeight:700,padding:"3px 12px",borderRadius:2},
+  gridTwo:     {display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 16px"},
+  label:       {display:"block",fontSize:11,color:A_MID,letterSpacing:"0.08em",marginBottom:4},
+  input:       {width:"100%",padding:"8px 10px",border:`1px solid #c8b47a`,borderRadius:3,background:"#fffef8",fontSize:14,color:A_DARK,outline:"none"},
+  ta:          {minHeight:64,resize:"vertical",lineHeight:1.6},
+  submitBtn:   {display:"flex",alignItems:"center",justifyContent:"center",gap:12,width:"100%",padding:"13px 0",background:A_DARK,color:A_WARM,border:"none",borderRadius:3,cursor:"pointer"},
+  previewMeta: {display:"flex",gap:16,flexWrap:"wrap",fontSize:14,color:A_DARK,background:"#fffdf5",border:`1px solid #d8c89a`,borderRadius:3,padding:"10px 14px",marginBottom:12},
+  pvTable:     {width:"100%",borderCollapse:"collapse",fontSize:14},
+  tdLabel:     {padding:"4px 10px 4px 0",color:A_MID,fontWeight:700,fontSize:12,width:100,verticalAlign:"top"},
+  tdVal:       {padding:"4px 0",color:A_DARK,lineHeight:1.6,whiteSpace:"pre-wrap"},
+  pvText:      {margin:0,fontSize:14,color:A_DARK,lineHeight:1.7,whiteSpace:"pre-wrap"},
+  saveBox:     {background:A_DARK,borderRadius:4,padding:16,marginBottom:12},
+  saveBtn:     {display:"block",width:"100%",padding:"13px 0",background:"#1E5631",color:"#fff",border:"none",borderRadius:3,cursor:"pointer",fontSize:14,fontWeight:700},
+  backBtn:     {flex:1,padding:"11px 0",background:"transparent",color:A_DARK,border:`2px solid ${A_DARK}`,borderRadius:3,cursor:"pointer",fontSize:13},
+  printBtn:    {flex:1,padding:"11px 0",background:A_ACCENT,color:"#fff",border:"none",borderRadius:3,cursor:"pointer",fontSize:13,fontWeight:700},
+  newBtn:      {display:"block",width:"100%",padding:"11px 0",background:"transparent",color:A_MID,border:`1.5px dashed ${A_MID}`,borderRadius:3,cursor:"pointer",fontSize:13,textAlign:"center"},
+};
+const ma = {
+  td:      {padding:"9px 10px",borderBottom:`1px solid ${M_BORDER}`,verticalAlign:"top"},
+  viewBtn: {padding:"3px 8px",background:M_ACCENT,color:"#fff",border:"none",borderRadius:3,cursor:"pointer",fontSize:11,marginRight:4},
+  delBtn:  {padding:"3px 8px",background:"#c62828",color:"#fff",border:"none",borderRadius:3,cursor:"pointer",fontSize:11},
+  barBtn:  {padding:"6px 12px",background:"transparent",border:`1.5px solid ${M_ACCENT}`,borderRadius:3,cursor:"pointer",fontSize:12,color:M_ACCENT},
+  printBtn:{padding:"6px 12px",background:M_ACCENT,color:"#fff",border:"none",borderRadius:3,cursor:"pointer",fontSize:12,marginLeft:"auto"},
+  delBtnSm:{padding:"6px 12px",background:"#fdecea",border:"1px solid #e57373",borderRadius:3,cursor:"pointer",fontSize:12,color:"#c62828"},
+  dmeta:   {display:"flex",gap:16,flexWrap:"wrap",fontSize:14,background:"#fff",border:`1px solid ${M_BORDER}`,borderRadius:4,padding:"10px 14px",marginBottom:14},
+};
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
