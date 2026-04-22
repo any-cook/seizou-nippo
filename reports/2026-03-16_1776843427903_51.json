@@ -1,0 +1,29 @@
+{
+  "id": "1776843427903_51",
+  "savedAt": "2026-04-22T07:37:07.903Z",
+  "date": "2026-03-16",
+  "author": "養父",
+  "batch1": {
+    "name": "Hスープ",
+    "qty": "700",
+    "start": "09:00",
+    "end": "16:00",
+    "notes": "水を足さずに700ちょうどとれました"
+  },
+  "batch2": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "notes": ""
+  },
+  "batch3": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "notes": ""
+  },
+  "semiProduct": "",
+  "otherNotes": ""
+}
