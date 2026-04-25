@@ -1,0 +1,47 @@
+{
+  "author": "養父",
+  "date": "2026-04-25",
+  "batch1": {
+    "name": "クラムチャウダー",
+    "qty": "106",
+    "start": "09:00",
+    "end": "11:00",
+    "upper": "",
+    "lower": "",
+    "ingredient": "",
+    "seal": "",
+    "vacuum": "",
+    "machineTime": "",
+    "notes": "特になし"
+  },
+  "batch2": {
+    "name": "西鉄豚と米",
+    "qty": "1200",
+    "start": "09:00",
+    "end": "15:00",
+    "upper": "赤木さん",
+    "lower": "養父",
+    "ingredient": "",
+    "seal": "よしなりくん",
+    "vacuum": "福士さん",
+    "machineTime": "2時間",
+    "notes": "お米が隙間から落ちてきてました。今回はグラムのバラつきが少なかったです"
+  },
+  "batch3": {
+    "name": "ぼっかけ、みそに、カレースープ",
+    "qty": "376.133.20",
+    "start": "10:00",
+    "end": "16:50",
+    "upper": "",
+    "lower": "",
+    "ingredient": "",
+    "seal": "",
+    "vacuum": "",
+    "machineTime": "",
+    "notes": "ぼっかけのお肉がいつもより多かったです"
+  },
+  "semiProduct": "",
+  "otherNotes": "",
+  "savedAt": "2026-04-25T08:36:06.166Z",
+  "id": "1777106166168"
+}
