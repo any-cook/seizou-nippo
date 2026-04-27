@@ -1,0 +1,47 @@
+{
+  "author": "養父",
+  "date": "2026-04-27",
+  "batch1": {
+    "name": "トリメシ小",
+    "qty": "1400",
+    "start": "09:00",
+    "end": "15:30",
+    "upper": "日高→小川",
+    "lower": "小川→工藤",
+    "ingredient": "山田",
+    "seal": "養父",
+    "vacuum": "なし",
+    "machineTime": "14:00",
+    "notes": "特にないです🎵"
+  },
+  "batch2": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "upper": "",
+    "lower": "",
+    "ingredient": "",
+    "seal": "",
+    "vacuum": "",
+    "machineTime": "",
+    "notes": ""
+  },
+  "batch3": {
+    "name": "",
+    "qty": "",
+    "start": "",
+    "end": "",
+    "upper": "",
+    "lower": "",
+    "ingredient": "",
+    "seal": "",
+    "vacuum": "",
+    "machineTime": "",
+    "notes": ""
+  },
+  "semiProduct": "豆腐ハンバーグ702P",
+  "otherNotes": "",
+  "savedAt": "2026-04-27T09:03:32.468Z",
+  "id": "1777280612507"
+}
