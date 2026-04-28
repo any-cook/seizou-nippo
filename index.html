@@ -5,16 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>製造日報システム</title>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap" rel="stylesheet">
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
 body { font-family:'M PLUS Rounded 1c',sans-serif; background:#F5EDD6; }
 input,textarea,select,button { font-family:inherit; }
-@media print { .no-print { display:none!important; } body { background:#fff; } }
-
-/* タブバー */
+@media print { .no-print{display:none!important;} body{background:#fff;} }
 .tab-bar { display:flex; align-items:center; background:#1A1208; padding:0 16px; gap:4px; position:sticky; top:0; z-index:100; }
 .tab-logo { color:#d8c89a; font-size:14px; font-weight:700; margin-right:auto; padding:12px 0; }
 .tab-btn { padding:12px 16px; background:transparent; border:none; border-bottom:3px solid transparent; color:#8B6A3E; cursor:pointer; font-size:13px; font-family:inherit; font-weight:500; }
@@ -22,8 +17,6 @@ input,textarea,select,button { font-family:inherit; }
 .tab-logout { padding:7px 12px; background:transparent; border:1.5px solid #8B6A3E; color:#8B6A3E; cursor:pointer; font-size:11px; border-radius:20px; font-family:inherit; }
 .msg-ok { padding:10px 16px; border-radius:12px; border:1.5px solid #81c784; font-size:13px; margin-bottom:14px; background:#e8f5e9; color:#2e7d32; font-weight:700; }
 .msg-err { padding:10px 16px; border-radius:12px; border:1.5px solid #e57373; font-size:13px; margin-bottom:14px; background:#fdecea; color:#c62828; font-weight:700; }
-
-/* 入力フォーム */
 .i-root { min-height:calc(100vh - 50px); background:#F5EDD6; padding-bottom:48px; }
 .i-container { max-width:700px; margin:0 auto; padding:0 16px; }
 .i-header { display:flex; align-items:center; gap:14px; padding:24px 0 16px; margin-bottom:20px; }
@@ -33,7 +26,7 @@ input,textarea,select,button { font-family:inherit; }
 .i-meta-row { display:flex; gap:14px; margin-bottom:10px; }
 .i-field { margin-bottom:14px; }
 .i-field label { display:block; font-size:18px; color:#222; font-weight:700; margin-bottom:6px; }
-.i-input { width:100%; padding:10px 14px; border:2px solid #d8c89a; border-radius:12px; background:#fff; font-size:14px; color:#444; outline:none; transition:border .2s; }
+.i-input { width:100%; padding:10px 14px; border:2px solid #d8c89a; border-radius:12px; background:#fff; font-size:14px; color:#444; outline:none; }
 .i-input:focus { border-color:#D4622A; }
 .i-textarea { min-height:72px; resize:vertical; line-height:1.7; }
 .i-card { background:#fff; border-radius:20px; padding:18px 20px; margin-bottom:16px; box-shadow:0 4px 20px rgba(0,0,0,.08); }
@@ -45,7 +38,7 @@ input,textarea,select,button { font-family:inherit; }
 .i-submit-btn { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; padding:15px 0; background:linear-gradient(135deg,#1A1208,#3d2c1a); color:#F5EDD6; border:none; border-radius:20px; cursor:pointer; font-size:16px; font-weight:700; margin-top:8px; }
 .i-preview-meta { display:flex; gap:16px; flex-wrap:wrap; font-size:14px; color:#444; background:#fff; border-radius:16px; padding:14px 18px; margin-bottom:14px; box-shadow:0 2px 12px rgba(0,0,0,.06); }
 .i-pv-table { width:100%; border-collapse:collapse; font-size:14px; }
-.i-pv-td-label { padding:6px 12px 6px 0; color:#222; font-weight:700; font-size:16px; width:150px; vertical-align:top; }
+.i-pv-td-label { padding:6px 12px 6px 0; color:#222; font-weight:700; font-size:15px; width:160px; vertical-align:top; }
 .i-pv-td-val { padding:6px 0; color:#444; line-height:1.6; white-space:pre-wrap; }
 .i-pv-text { margin:0; font-size:14px; color:#444; line-height:1.7; white-space:pre-wrap; }
 .i-save-box { background:#1A1208; border-radius:16px; padding:18px; margin-bottom:14px; }
@@ -54,10 +47,8 @@ input,textarea,select,button { font-family:inherit; }
 .i-print-btn { flex:1; padding:12px 0; background:#D4622A; color:#fff; border:none; border-radius:12px; cursor:pointer; font-size:13px; font-family:inherit; font-weight:700; }
 .i-new-btn { display:block; width:100%; padding:12px 0; background:transparent; color:#8B6A3E; border:2px dashed #d8c89a; border-radius:12px; cursor:pointer; font-size:13px; font-family:inherit; text-align:center; font-weight:700; margin-top:8px; }
 .staff-section { background:#FFF9F0; border:2px solid #d8c89a; border-radius:14px; padding:12px 14px; margin-bottom:12px; }
-.staff-section-title { font-size:16px; color:#222; font-weight:700; margin-bottom:10px; }
-
-/* 管理画面 */
-.m-root { display:flex; min-height:calc(100vh - 50px); font-family:'M PLUS Rounded 1c',sans-serif; background:#EEF4FB; }
+.staff-title { font-size:16px; color:#222; font-weight:700; margin-bottom:10px; }
+.m-root { display:flex; min-height:calc(100vh - 50px); background:#EEF4FB; }
 .m-sidebar { width:200px; flex-shrink:0; background:#0D1B2A; display:flex; flex-direction:column; padding:20px 0 24px; gap:20px; }
 .m-sidebar-title { color:#a8c4e0; font-size:11px; letter-spacing:.2em; text-transform:uppercase; padding:0 16px; }
 .m-stat-box { background:#1e3a5f; border-radius:6px; padding:10px 12px; }
@@ -89,12 +80,8 @@ input,textarea,select,button { font-family:inherit; }
 .m-detail-body { max-width:700px; margin:0 auto; padding:20px 16px; }
 .m-dmeta { display:flex; gap:16px; flex-wrap:wrap; font-size:14px; background:#fff; border:1px solid #C5D5E8; border-radius:4px; padding:10px 14px; margin-bottom:14px; }
 .m-dcard { background:#fff; border:1px solid #C5D5E8; border-radius:4px; padding:14px 18px; margin-bottom:12px; }
-
-/* モーダル */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:200; }
-.modal-box { background:#fff; border-radius:16px; padding:28px; width:100%; max-width:480px; margin:0 16px; box-shadow:0 8px 32px rgba(0,0,0,.2); }
-
-/* ログイン */
+.modal-box { background:#fff; border-radius:16px; padding:28px; width:100%; max-width:480px; margin:0 16px; }
 .login-root { min-height:100vh; background:#F5EDD6; display:flex; align-items:center; justify-content:center; }
 .login-box { width:100%; max-width:440px; padding:0 16px; }
 .login-card { background:#fff; border-radius:20px; padding:28px; box-shadow:0 4px 20px rgba(0,0,0,.1); }
@@ -104,9 +91,13 @@ input,textarea,select,button { font-family:inherit; }
 </style>
 </head>
 <body>
-<div id="app"></div>
-<script>
-// ─── Firebase設定 ─────────────────────────────────────────────
+<div id="app"><div style="text-align:center;padding:100px 20px;color:#8B6A3E;font-size:16px;">読み込み中…</div></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+// Firebase初期化
 var firebaseConfig = {
   apiKey: "AIzaSyBMn_7cMty6SOmay3fwTZRHNjIsNq5XFx8",
   authDomain: "seizou-nippo.firebaseapp.com",
@@ -115,68 +106,66 @@ var firebaseConfig = {
   messagingSenderId: "484585876310",
   appId: "1:484585876310:web:f5b641ddf222138a2d84f7"
 };
-firebase.initializeApp(firebaseConfig);
-var db = firebase.firestore();
-var COLLECTION = "nippo";
+var app = initializeApp(firebaseConfig);
+var db = getFirestore(app);
+var COL = "nippo";
 
-// ─── アプリ設定 ───────────────────────────────────────────────
-var APP_PASS  = "anycook8299";
-var BATCH_LABELS = ["１釜目","２釜目","３釜目"];
-var BATCH_KEYS   = ["batch1","batch2","batch3"];
-var BATCH_COLORS = ["#C0392B","#1F618D","#1E8449"];
-
-function emptyBatch() {
-  return { name:"", qty:"", start:"", end:"", upper:"", lower:"", ingredient:"", seal:"", vacuum:"", machineTime:"", notes:"" };
-}
-function emptyForm() {
-  return { author:"", date:"", batch1:emptyBatch(), batch2:emptyBatch(), batch3:emptyBatch(), semiProduct:"", otherNotes:"" };
-}
-
-// ─── Firestore CRUD ───────────────────────────────────────────
-function fbLoad() {
-  return db.collection(COLLECTION).orderBy("date","desc").get().then(function(snap) {
-    var records = [];
-    snap.forEach(function(doc) {
-      var d = doc.data();
-      d.id = doc.id;
-      records.push(d);
-    });
-    return records;
+// Firestore操作
+async function fbLoad() {
+  var q = query(collection(db, COL), orderBy("date","desc"));
+  var snap = await getDocs(q);
+  var records = [];
+  snap.forEach(function(d) {
+    var data = d.data();
+    data.id = d.id;
+    records.push(data);
   });
+  return records;
 }
 
-function fbSave(record) {
+async function fbSave(record) {
   var data = JSON.parse(JSON.stringify(record));
-  if (data.id && data.id.length > 10) {
-    return db.collection(COLLECTION).doc(data.id).set(data);
+  if (data.id && data.id.length > 15) {
+    await setDoc(doc(db, COL, data.id), data);
   } else {
-    return db.collection(COLLECTION).add(data).then(function(ref) {
-      return db.collection(COLLECTION).doc(ref.id).update({ id: ref.id });
-    });
+    var ref = await addDoc(collection(db, COL), data);
+    await setDoc(doc(db, COL, ref.id), Object.assign({}, data, {id: ref.id}));
   }
 }
 
-function fbDelete(id) {
-  return db.collection(COLLECTION).doc(id).delete();
+async function fbDelete(id) {
+  await deleteDoc(doc(db, COL, id));
 }
 
-// ─── CSV ──────────────────────────────────────────────────────
-var CSV_HEADERS = ["製造日","記入者","保存日時",
+// ─── 定数 ──────────────────────────────────────────────────────
+var APP_PASS = "anycook8299";
+var BATCH_LABELS = ["１釜目","２釜目","３釜目"];
+var BATCH_KEYS = ["batch1","batch2","batch3"];
+var BATCH_COLORS = ["#C0392B","#1F618D","#1E8449"];
+
+function emptyBatch() {
+  return {name:"",qty:"",start:"",end:"",upper:"",lower:"",ingredient:"",seal:"",vacuum:"",machineTime:"",notes:""};
+}
+function emptyForm() {
+  return {author:"",date:"",batch1:emptyBatch(),batch2:emptyBatch(),batch3:emptyBatch(),semiProduct:"",otherNotes:""};
+}
+
+// ─── CSV ───────────────────────────────────────────────────────
+var CSV_H = ["製造日","記入者","保存日時",
   "１釜目_品名","１釜目_製造数","１釜目_開始","１釜目_終了","１釜目_上担当","１釜目_下担当","１釜目_具材担当","１釜目_シール担当","１釜目_真空機担当","１釜目_具詰充填機稼働時間","１釜目_備考",
   "２釜目_品名","２釜目_製造数","２釜目_開始","２釜目_終了","２釜目_上担当","２釜目_下担当","２釜目_具材担当","２釜目_シール担当","２釜目_真空機担当","２釜目_具詰充填機稼働時間","２釜目_備考",
   "３釜目_品名","３釜目_製造数","３釜目_開始","３釜目_終了","３釜目_上担当","３釜目_下担当","３釜目_具材担当","３釜目_シール担当","３釜目_真空機担当","３釜目_具詰充填機稼働時間","３釜目_備考",
   "半製品","その他"];
 
+function batchCSV(b) {
+  return [b.name,b.qty,b.start,b.end,b.upper||"",b.lower||"",b.ingredient||"",b.seal||"",b.vacuum||"",b.machineTime||"",b.notes];
+}
 function toCSV(records) {
   var rows = records.map(function(r) {
-    return [r.date, r.author, r.savedAt,
-      r.batch1.name, r.batch1.qty, r.batch1.start, r.batch1.end, r.batch1.upper||"", r.batch1.lower||"", r.batch1.ingredient||"", r.batch1.seal||"", r.batch1.vacuum||"", r.batch1.machineTime||"", r.batch1.notes,
-      r.batch2.name, r.batch2.qty, r.batch2.start, r.batch2.end, r.batch2.upper||"", r.batch2.lower||"", r.batch2.ingredient||"", r.batch2.seal||"", r.batch2.vacuum||"", r.batch2.machineTime||"", r.batch2.notes,
-      r.batch3.name, r.batch3.qty, r.batch3.start, r.batch3.end, r.batch3.upper||"", r.batch3.lower||"", r.batch3.ingredient||"", r.batch3.seal||"", r.batch3.vacuum||"", r.batch3.machineTime||"", r.batch3.notes,
-      r.semiProduct, r.otherNotes
-    ].map(function(v){ return '"'+(v||"").replace(/"/g,'""')+'"'; }).join(",");
+    return [r.date,r.author,r.savedAt||""].concat(batchCSV(r.batch1)).concat(batchCSV(r.batch2)).concat(batchCSV(r.batch3)).concat([r.semiProduct,r.otherNotes])
+      .map(function(v){ return '"'+(v||"").replace(/"/g,'""')+'"'; }).join(",");
   });
-  return "\uFEFF"+CSV_HEADERS.join(",")+"\n"+rows.join("\n");
+  return "\uFEFF"+CSV_H.join(",")+"\n"+rows.join("\n");
 }
 function dlCSV(records) {
   var blob = new Blob([toCSV(records)],{type:"text/csv;charset=utf-8;"});
@@ -187,8 +176,7 @@ function dlCSV(records) {
 }
 function dlTemplate() {
   var ex = '"2026-04-22","山田太郎","","製品A","150kg","08:00","10:00","養父","日高","養父","日高","養父","08:00","異常なし","","","","","","","","","","","","","","","","","","","","","",""';
-  var csv = "\uFEFF"+CSV_HEADERS.join(",")+"\n"+ex;
-  var blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  var blob = new Blob(["\uFEFF"+CSV_H.join(",")+"\n"+ex],{type:"text/csv;charset=utf-8;"});
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
   a.href=url; a.download="nippo_template.csv"; a.click(); URL.revokeObjectURL(url);
@@ -198,8 +186,8 @@ function parseCSV(text) {
   if (lines.length < 2) return [];
   var headers = lines[0].split(",").map(function(h){ return h.replace(/^"|"$/g,"").trim(); });
   var records = [];
-  for (var i=1; i<lines.length; i++) {
-    var vals=[], cur="", inQ=false;
+  for (var i = 1; i < lines.length; i++) {
+    var vals=[],cur="",inQ=false;
     for (var c=0; c<lines[i].length; c++) {
       var ch=lines[i][c];
       if (ch==='"') { inQ=!inQ; }
@@ -213,30 +201,34 @@ function parseCSV(text) {
     records.push({
       id: Date.now().toString()+"_"+i,
       savedAt: obj["保存日時"]||new Date().toISOString(),
-      date: obj["製造日"], author: obj["記入者"]||"",
-      batch1:{ name:obj["１釜目_品名"]||"", qty:obj["１釜目_製造数"]||"", start:obj["１釜目_開始"]||"", end:obj["１釜目_終了"]||"", upper:obj["１釜目_上担当"]||"", lower:obj["１釜目_下担当"]||"", ingredient:obj["１釜目_具材担当"]||"", seal:obj["１釜目_シール担当"]||"", vacuum:obj["１釜目_真空機担当"]||"", machineTime:obj["１釜目_具詰充填機稼働時間"]||"", notes:obj["１釜目_備考"]||"" },
-      batch2:{ name:obj["２釜目_品名"]||"", qty:obj["２釜目_製造数"]||"", start:obj["２釜目_開始"]||"", end:obj["２釜目_終了"]||"", upper:obj["２釜目_上担当"]||"", lower:obj["２釜目_下担当"]||"", ingredient:obj["２釜目_具材担当"]||"", seal:obj["２釜目_シール担当"]||"", vacuum:obj["２釜目_真空機担当"]||"", machineTime:obj["２釜目_具詰充填機稼働時間"]||"", notes:obj["２釜目_備考"]||"" },
-      batch3:{ name:obj["３釜目_品名"]||"", qty:obj["３釜目_製造数"]||"", start:obj["３釜目_開始"]||"", end:obj["３釜目_終了"]||"", upper:obj["３釜目_上担当"]||"", lower:obj["３釜目_下担当"]||"", ingredient:obj["３釜目_具材担当"]||"", seal:obj["３釜目_シール担当"]||"", vacuum:obj["３釜目_真空機担当"]||"", machineTime:obj["３釜目_具詰充填機稼働時間"]||"", notes:obj["３釜目_備考"]||"" },
+      date:obj["製造日"], author:obj["記入者"]||"",
+      batch1:{name:obj["１釜目_品名"]||"",qty:obj["１釜目_製造数"]||"",start:obj["１釜目_開始"]||"",end:obj["１釜目_終了"]||"",upper:obj["１釜目_上担当"]||"",lower:obj["１釜目_下担当"]||"",ingredient:obj["１釜目_具材担当"]||"",seal:obj["１釜目_シール担当"]||"",vacuum:obj["１釜目_真空機担当"]||"",machineTime:obj["１釜目_具詰充填機稼働時間"]||"",notes:obj["１釜目_備考"]||""},
+      batch2:{name:obj["２釜目_品名"]||"",qty:obj["２釜目_製造数"]||"",start:obj["２釜目_開始"]||"",end:obj["２釜目_終了"]||"",upper:obj["２釜目_上担当"]||"",lower:obj["２釜目_下担当"]||"",ingredient:obj["２釜目_具材担当"]||"",seal:obj["２釜目_シール担当"]||"",vacuum:obj["２釜目_真空機担当"]||"",machineTime:obj["２釜目_具詰充填機稼働時間"]||"",notes:obj["２釜目_備考"]||""},
+      batch3:{name:obj["３釜目_品名"]||"",qty:obj["３釜目_製造数"]||"",start:obj["３釜目_開始"]||"",end:obj["３釜目_終了"]||"",upper:obj["３釜目_上担当"]||"",lower:obj["３釜目_下担当"]||"",ingredient:obj["３釜目_具材担当"]||"",seal:obj["３釜目_シール担当"]||"",vacuum:obj["３釜目_真空機担当"]||"",machineTime:obj["３釜目_具詰充填機稼働時間"]||"",notes:obj["３釜目_備考"]||""},
       semiProduct:obj["半製品"]||"", otherNotes:obj["その他"]||""
     });
   }
   return records;
 }
 
-// ─── DOM helpers ──────────────────────────────────────────────
+// ─── DOM helper ────────────────────────────────────────────────
 function el(tag, attrs, children) {
   var e = document.createElement(tag);
-  if (attrs) Object.keys(attrs).forEach(function(k) {
-    if (k==="style" && typeof attrs[k]==="object") { Object.assign(e.style,attrs[k]); }
-    else if (k.startsWith("on")) { e.addEventListener(k.slice(2).toLowerCase(),attrs[k]); }
-    else if (k==="className") { e.className=attrs[k]; }
-    else if (k==="htmlFor") { e.htmlFor=attrs[k]; }
-    else { e.setAttribute(k,attrs[k]); }
-  });
-  if (children) (Array.isArray(children)?children:[children]).forEach(function(c) {
-    if (c==null) return;
-    e.appendChild(typeof c==="string"?document.createTextNode(c):c);
-  });
+  if (attrs) {
+    Object.keys(attrs).forEach(function(k) {
+      if (k==="style" && typeof attrs[k]==="object") { Object.assign(e.style,attrs[k]); }
+      else if (k==="className") { e.className=attrs[k]; }
+      else if (k==="htmlFor") { e.htmlFor=attrs[k]; }
+      else if (k.startsWith("on")) { e.addEventListener(k.slice(2).toLowerCase(),attrs[k]); }
+      else { e.setAttribute(k,attrs[k]); }
+    });
+  }
+  if (children) {
+    (Array.isArray(children)?children:[children]).forEach(function(c) {
+      if (c==null) return;
+      e.appendChild(typeof c==="string"?document.createTextNode(c):c);
+    });
+  }
   return e;
 }
 function showMsg(container, text, isOk, ms) {
@@ -245,47 +237,45 @@ function showMsg(container, text, isOk, ms) {
   setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); },ms||5000);
 }
 
-// ─── State ────────────────────────────────────────────────────
-var state = {
+// ─── State ─────────────────────────────────────────────────────
+var S = {
   page:"login", mode:"input", form:emptyForm(),
-  formPage:"form", submittedRecord:null,
+  formPage:"form", submitted:null,
   records:[], detail:null,
-  search:"", filterAuthor:"all", filterMonth:"all",
+  search:"", filterA:"all", filterM:"all",
   showImport:false, loading:false
 };
 
 function render() {
   var app = document.getElementById("app");
   app.innerHTML = "";
-  if (state.page==="login") { app.appendChild(buildLogin()); return; }
-  if (state.showImport) { app.appendChild(buildImportModal()); }
-  var wrapper = el("div");
-  wrapper.appendChild(buildTabBar());
-  if (state.mode==="input") {
-    wrapper.appendChild(state.formPage==="preview" ? buildPreview() : buildForm());
+  if (S.page==="login") { app.appendChild(buildLogin()); return; }
+  if (S.showImport) { app.appendChild(buildImportModal()); }
+  var w = document.createElement("div");
+  w.appendChild(buildTabBar());
+  if (S.mode==="input") {
+    w.appendChild(S.formPage==="preview" ? buildPreview() : buildForm());
   } else {
-    wrapper.appendChild(state.detail ? buildDetail() : buildAdmin());
+    w.appendChild(S.detail ? buildDetail() : buildAdmin());
   }
-  app.appendChild(wrapper);
+  app.appendChild(w);
 }
 
-// ─── Login ────────────────────────────────────────────────────
+// ─── Login ─────────────────────────────────────────────────────
 function buildLogin() {
   var msgArea = el("div");
   var passInput = el("input",{className:"login-input",type:"password",placeholder:"パスワードを入力"});
   var btn = el("button",{className:"login-btn"},"ログイン →");
   btn.addEventListener("click",function() {
-    var val = passInput.value.trim();
-    if (!val) { showMsg(msgArea,"パスワードを入力してください",false); return; }
-    if (val!==APP_PASS) { showMsg(msgArea,"パスワードが違います",false); passInput.value=""; return; }
-    state.page="main"; render(); loadRecords();
+    if (passInput.value.trim()!==APP_PASS) { showMsg(msgArea,"パスワードが違います",false); passInput.value=""; return; }
+    S.page="main"; render(); loadRecords();
   });
   passInput.addEventListener("keydown",function(e){ if(e.key==="Enter") btn.click(); });
   return el("div",{className:"login-root"},[
     el("div",{className:"login-box"},[
       el("div",{style:{textAlign:"center",marginBottom:"24px"}},[
         el("div",{style:{fontSize:"48px",marginBottom:"8px"}},"📋"),
-        el("h1",{style:{fontSize:"24px",fontWeight:"700",color:"#1A1208",marginBottom:"6px"}},"製造日報システム"),
+        el("h1",{style:{fontSize:"22px",fontWeight:"700",color:"#1A1208",marginBottom:"6px"}},"製造日報システム"),
         el("p",{style:{color:"#8B6A3E",fontSize:"13px"}},"パスワードを入力してログインしてください")
       ]),
       el("div",{className:"login-card"},[
@@ -296,84 +286,84 @@ function buildLogin() {
   ]);
 }
 
-// ─── Tab Bar ──────────────────────────────────────────────────
+// ─── TabBar ────────────────────────────────────────────────────
 function buildTabBar() {
-  var inputBtn = el("button",{className:"tab-btn"+(state.mode==="input"?" active":"")},"✏️ 日報入力");
-  var adminBtn = el("button",{className:"tab-btn"+(state.mode==="admin"?" active":"")},"🗂️ 管理画面");
-  var logoutBtn = el("button",{className:"tab-logout no-print"},"🔓 ログアウト");
-  inputBtn.addEventListener("click",function(){ state.mode="input"; state.formPage="form"; render(); });
-  adminBtn.addEventListener("click",function(){ state.mode="admin"; state.detail=null; render(); loadRecords(); });
-  logoutBtn.addEventListener("click",function(){ state.page="login"; state.records=[]; render(); });
-  return el("div",{className:"tab-bar no-print"},[
-    el("div",{className:"tab-logo"},"📋 製造日報システム"),
-    inputBtn, adminBtn, logoutBtn
-  ]);
+  var ib = el("button",{className:"tab-btn"+(S.mode==="input"?" active":"")},"✏️ 日報入力");
+  var ab = el("button",{className:"tab-btn"+(S.mode==="admin"?" active":"")},"🗂️ 管理画面");
+  var lb = el("button",{className:"tab-logout no-print"},"🔓 ログアウト");
+  ib.addEventListener("click",function(){ S.mode="input"; S.formPage="form"; render(); });
+  ab.addEventListener("click",function(){ S.mode="admin"; S.detail=null; render(); loadRecords(); });
+  lb.addEventListener("click",function(){ S.page="login"; S.records=[]; render(); });
+  return el("div",{className:"tab-bar no-print"},[el("div",{className:"tab-logo"},"📋 製造日報システム"),ib,ab,lb]);
 }
 
-// ─── Form ─────────────────────────────────────────────────────
+// ─── Form ──────────────────────────────────────────────────────
 function buildForm() {
-  var f = state.form;
-  var msgArea = el("div");
-  function fieldEl(label,child) {
-    return el("div",{className:"i-field"},[el("label",null,label),child]);
+  var f = S.form;
+  function fld(label,child){ return el("div",{className:"i-field"},[el("label",null,label),child]); }
+  function inp(key,field,type,ph){
+    var i=el("input",{className:"i-input",type:type||"text"});
+    i.value=f[key][field]||""; if(ph) i.placeholder=ph;
+    i.addEventListener("input",function(e){ S.form[key][field]=e.target.value; });
+    return i;
+  }
+  function stf(key,field){
+    var i=el("input",{className:"i-input",type:"text",placeholder:"氏名を入力"});
+    i.value=f[key][field]||"";
+    i.addEventListener("input",function(e){ S.form[key][field]=e.target.value; });
+    return i;
   }
   function batchCard(key,label,color) {
-    var b = f[key];
-    function upd(field){ return function(e){ state.form[key][field]=e.target.value; }; }
-    function inp(field,type,ph) {
-      var i=el("input",{className:"i-input",type:type||"text"});
-      i.value=b[field]||""; i.placeholder=ph||"";
-      i.addEventListener("input",upd(field)); return i;
-    }
-    function staffInp(field) {
-      var i=el("input",{className:"i-input",type:"text",placeholder:"氏名を入力"});
-      i.value=b[field]||""; i.addEventListener("input",upd(field)); return i;
-    }
-    var notesT=el("textarea",{className:"i-input i-textarea"}); notesT.value=b.notes; notesT.placeholder="温度異常、異臭など"; notesT.addEventListener("input",upd("notes"));
+    var b=f[key];
+    var notesT=el("textarea",{className:"i-input i-textarea"});
+    notesT.value=b.notes||""; notesT.placeholder="温度異常、異臭など";
+    notesT.addEventListener("input",function(e){ S.form[key].notes=e.target.value; });
     return el("div",{className:"i-card",style:{borderLeft:"4px solid "+color}},[
       el("div",{className:"i-card-header"},[el("span",{className:"i-batch-badge",style:{background:color}},label)]),
       el("div",{className:"i-grid2"},[
-        fieldEl("品名",inp("name","text","製品名")),
-        fieldEl("製造数",inp("qty","text","例：150kg")),
-        fieldEl("開始時間",inp("start","time","")),
-        fieldEl("終了時間",inp("end","time",""))
+        fld("品名",inp(key,"name","text","製品名")),
+        fld("製造数",inp(key,"qty","text","例：150kg")),
+        fld("開始時間",inp(key,"start","time","")),
+        fld("終了時間",inp(key,"end","time",""))
       ]),
       el("div",{className:"staff-section"},[
-        el("div",{className:"staff-section-title"},"🔧 具詰充填機　担当者"),
+        el("div",{className:"staff-title"},"🔧 具詰充填機　担当者"),
         el("div",{className:"i-grid2"},[
-          fieldEl("上担当者",staffInp("upper")),
-          fieldEl("下担当者",staffInp("lower")),
-          fieldEl("具材担当者",staffInp("ingredient")),
-          fieldEl("シール担当者",staffInp("seal")),
-          fieldEl("真空機担当者",staffInp("vacuum")),
-          fieldEl("具詰充填機稼働時間",inp("machineTime","time",""))
+          fld("上担当者",stf(key,"upper")),
+          fld("下担当者",stf(key,"lower")),
+          fld("具材担当者",stf(key,"ingredient")),
+          fld("シール担当者",stf(key,"seal")),
+          fld("真空機担当者",stf(key,"vacuum")),
+          fld("具詰充填機稼働時間",inp(key,"machineTime","time",""))
         ])
       ]),
-      fieldEl("製造時、気が付いた点",notesT)
+      fld("製造時、気が付いた点",notesT)
     ]);
   }
-  var authorSel = el("select",{className:"i-input"});
-  ["","養父","日高"].forEach(function(name){
-    var op=el("option",{value:name},name||"記入者を選択");
-    if(f.author===name) op.selected=true;
+  var authorSel=el("select",{className:"i-input"});
+  ["","養父","日高"].forEach(function(n){
+    var op=el("option",{value:n},n||"記入者を選択");
+    if(f.author===n) op.selected=true;
     authorSel.appendChild(op);
   });
-  authorSel.addEventListener("change",function(e){ state.form.author=e.target.value; });
-  var dateI=el("input",{className:"i-input",type:"date"}); dateI.value=f.date; dateI.addEventListener("input",function(e){ state.form.date=e.target.value; });
-  var semiT=el("textarea",{className:"i-input i-textarea"}); semiT.value=f.semiProduct; semiT.placeholder="例：〇〇 200kg 保管場所：冷蔵庫"; semiT.addEventListener("input",function(e){ state.form.semiProduct=e.target.value; });
-  var otherT=el("textarea",{className:"i-input i-textarea"}); otherT.value=f.otherNotes; otherT.placeholder="設備の異常、原材料の状況など"; otherT.addEventListener("input",function(e){ state.form.otherNotes=e.target.value; });
+  authorSel.addEventListener("change",function(e){ S.form.author=e.target.value; });
+  var dateI=el("input",{className:"i-input",type:"date"});
+  dateI.value=f.date;
+  dateI.addEventListener("input",function(e){ S.form.date=e.target.value; });
+  var semiT=el("textarea",{className:"i-input i-textarea"});
+  semiT.value=f.semiProduct; semiT.placeholder="例：〇〇 200kg 保管場所：冷蔵庫";
+  semiT.addEventListener("input",function(e){ S.form.semiProduct=e.target.value; });
+  var otherT=el("textarea",{className:"i-input i-textarea"});
+  otherT.value=f.otherNotes; otherT.placeholder="設備の異常、原材料の状況など";
+  otherT.addEventListener("input",function(e){ S.form.otherNotes=e.target.value; });
   var submitBtn=el("button",{className:"i-submit-btn"},"日報を確認する　→");
   submitBtn.addEventListener("click",function(){
-    var record=JSON.parse(JSON.stringify(state.form));
-    record.savedAt=new Date().toISOString(); record.id=Date.now().toString();
-    state.submittedRecord=record; state.formPage="preview"; render();
+    var r=JSON.parse(JSON.stringify(S.form));
+    r.savedAt=new Date().toISOString(); r.id=Date.now().toString();
+    S.submitted=r; S.formPage="preview"; render();
   });
   return el("div",{className:"i-root"},[el("div",{className:"i-container"},[
-    el("div",{className:"i-header"},[
-      el("div",{className:"i-accent"}),
-      el("div",{style:{flex:"1"}},[el("div",{className:"i-header-label"},"DAILY PRODUCTION REPORT"),el("h1",{className:"i-title"},"製造日報")])
-    ]),
-    msgArea,
+    el("div",{className:"i-header"},[el("div",{className:"i-accent"}),el("div",{style:{flex:"1"}},[el("div",{className:"i-header-label"},"DAILY PRODUCTION REPORT"),el("h1",{className:"i-title"},"製造日報")])]),
     el("div",{className:"i-meta-row"},[
       el("div",{className:"i-field",style:{flex:"1"}},[el("label",null,"記入者"),authorSel]),
       el("div",{className:"i-field",style:{flex:"1"}},[el("label",null,"製造日"),dateI])
@@ -381,25 +371,17 @@ function buildForm() {
     batchCard("batch1","１釜目","#C0392B"),
     batchCard("batch2","２釜目","#1F618D"),
     batchCard("batch3","３釜目","#1E8449"),
-    el("div",{className:"i-card"},[
-      el("div",{className:"i-card-header"},[el("span",{className:"i-shead"},"▸"),el("span",{className:"i-shead-title"},"半製品")]),
-      el("div",{className:"i-field"},[el("label",null,"半製品があれば入力してください"),semiT])
-    ]),
-    el("div",{className:"i-card"},[
-      el("div",{className:"i-card-header"},[el("span",{className:"i-shead"},"▸"),el("span",{className:"i-shead-title"},"その他")]),
-      el("div",{className:"i-field"},[el("label",null,"その他気づいた点があれば入力してください"),otherT])
-    ]),
+    el("div",{className:"i-card"},[el("div",{className:"i-card-header"},[el("span",{className:"i-shead"},"▸"),el("span",{className:"i-shead-title"},"半製品")]),fld("半製品があれば入力してください",semiT)]),
+    el("div",{className:"i-card"},[el("div",{className:"i-card-header"},[el("span",{className:"i-shead"},"▸"),el("span",{className:"i-shead-title"},"その他")]),fld("その他気づいた点があれば入力してください",otherT)]),
     submitBtn
   ])]);
 }
 
-// ─── Preview ──────────────────────────────────────────────────
+// ─── Preview ───────────────────────────────────────────────────
 function buildPreview() {
-  var r = state.submittedRecord;
-  var msgArea = el("div");
-  function pvRow(label,val) {
-    return el("tr",null,[el("td",{className:"i-pv-td-label"},label),el("td",{className:"i-pv-td-val"},val||"―")]);
-  }
+  var r=S.submitted;
+  var msgArea=el("div");
+  function pvRow(label,val){ return el("tr",null,[el("td",{className:"i-pv-td-label"},label),el("td",{className:"i-pv-td-val"},val||"―")]); }
   function batchSec(key,label,color) {
     var b=r[key];
     return el("div",{className:"i-card",style:{borderLeft:"4px solid "+color}},[
@@ -424,16 +406,13 @@ function buildPreview() {
     });
   });
   var backBtn=el("button",{className:"i-back-btn"},"← 修正する");
-  backBtn.addEventListener("click",function(){ state.formPage="form"; render(); });
+  backBtn.addEventListener("click",function(){ S.formPage="form"; render(); });
   var printBtn=el("button",{className:"i-print-btn"},"🖨️ 印刷");
   printBtn.addEventListener("click",function(){ window.print(); });
   var newBtn=el("button",{className:"i-new-btn"},"＋ 新しい日報を入力する");
-  newBtn.addEventListener("click",function(){ state.form=emptyForm(); state.formPage="form"; state.submittedRecord=null; render(); });
+  newBtn.addEventListener("click",function(){ S.form=emptyForm(); S.formPage="form"; S.submitted=null; render(); });
   return el("div",{className:"i-root"},[el("div",{className:"i-container"},[
-    el("div",{className:"i-header"},[
-      el("div",{className:"i-accent"}),
-      el("div",{style:{flex:"1"}},[el("div",{className:"i-header-label"},"CONFIRM & SAVE"),el("h1",{className:"i-title"},"確認・保存")])
-    ]),
+    el("div",{className:"i-header"},[el("div",{className:"i-accent"}),el("div",{style:{flex:"1"}},[el("div",{className:"i-header-label"},"CONFIRM & SAVE"),el("h1",{className:"i-title"},"確認・保存")])]),
     msgArea,
     el("div",{className:"i-preview-meta"},[
       el("span",null,[el("b",null,"記入者："),document.createTextNode(r.author||"―")]),
@@ -450,42 +429,39 @@ function buildPreview() {
   ])]);
 }
 
-// ─── Admin ────────────────────────────────────────────────────
+// ─── Admin ─────────────────────────────────────────────────────
 function loadRecords() {
-  state.loading=true; render();
+  S.loading=true; render();
   fbLoad().then(function(data){
-    state.records=data; state.loading=false; render();
+    S.records=data; S.loading=false; render();
   }).catch(function(e){
-    state.loading=false; render();
+    S.loading=false; render();
     var m=document.querySelector(".m-main");
     if(m) showMsg(m,"読み込み失敗: "+e.message,false);
   });
 }
 
 function getFiltered() {
-  var q=state.search.toLowerCase();
-  return state.records.filter(function(r){
+  var q=S.search.toLowerCase();
+  return S.records.filter(function(r){
     var ms=!q||(r.author||"").toLowerCase().includes(q)||(r.date||"").includes(q)
-      ||BATCH_KEYS.some(function(k){ return (r[k]&&r[k].name||"").toLowerCase().includes(q); })
+      ||BATCH_KEYS.some(function(k){ return ((r[k]&&r[k].name)||"").toLowerCase().includes(q); })
       ||(r.semiProduct||"").includes(q)||(r.otherNotes||"").includes(q);
-    return ms&&(state.filterAuthor==="all"||r.author===state.filterAuthor)
-              &&(state.filterMonth==="all"||(r.date||"").startsWith(state.filterMonth));
+    return ms&&(S.filterA==="all"||r.author===S.filterA)&&(S.filterM==="all"||(r.date||"").startsWith(S.filterM));
   });
 }
 
-function buildFilteredTable() {
+function buildTable() {
   var filtered=getFiltered();
   if (filtered.length===0) {
-    return el("div",{className:"m-empty"},state.loading?"読み込み中…":state.records.length===0?"まだ日報が保存されていません":"条件に合う記録がありません");
+    return el("div",{className:"m-empty"},S.loading?"読み込み中…":S.records.length===0?"まだ日報が保存されていません":"条件に合う記録がありません");
   }
   var thead=el("tr",{style:{background:"#1E3A5F"}});
-  ["製造日","記入者","１釜目","２釜目","３釜目","半製品","その他",""].forEach(function(h){
-    thead.appendChild(el("th",{className:"m-th"},h));
-  });
+  ["製造日","記入者","１釜目","２釜目","３釜目","半製品","その他",""].forEach(function(h){ thead.appendChild(el("th",{className:"m-th"},h)); });
   var tbody=el("tbody");
   filtered.forEach(function(r,idx){
     var tr=el("tr",{style:{cursor:"pointer",background:idx%2===0?"#fff":"#EEF4FB"}});
-    tr.addEventListener("click",function(){ state.detail=r; render(); });
+    tr.addEventListener("click",function(){ S.detail=r; render(); });
     tr.appendChild(el("td",{className:"m-td"},[el("b",null,r.date||"―")]));
     tr.appendChild(el("td",{className:"m-td"},r.author||"―"));
     BATCH_KEYS.forEach(function(key,i){
@@ -502,14 +478,14 @@ function buildFilteredTable() {
     tr.appendChild(el("td",{className:"m-td-clamp"},r.otherNotes||"―"));
     var atd=el("td",{className:"m-td",style:{whiteSpace:"nowrap"}});
     atd.addEventListener("click",function(e){ e.stopPropagation(); });
-    var vb=el("button",{className:"m-view-btn"},"詳細"); vb.addEventListener("click",function(){ state.detail=r; render(); });
+    var vb=el("button",{className:"m-view-btn"},"詳細"); vb.addEventListener("click",function(){ S.detail=r; render(); });
     var db2=el("button",{className:"m-del-btn"},"削除");
     db2.addEventListener("click",function(){
       if(!confirm("この記録を削除しますか？")) return;
       fbDelete(r.id).then(function(){
-        state.records=state.records.filter(function(x){ return x.id!==r.id; });
+        S.records=S.records.filter(function(x){ return x.id!==r.id; });
         var tw=document.querySelector(".m-table-wrap,.m-empty");
-        if(tw){ var nt=buildFilteredTable(); tw.parentNode.replaceChild(nt,tw); }
+        if(tw){ var nt=buildTable(); tw.parentNode.replaceChild(nt,tw); }
       }).catch(function(e){ alert("削除失敗: "+e.message); });
     });
     atd.appendChild(vb); atd.appendChild(db2); tr.appendChild(atd);
@@ -520,8 +496,8 @@ function buildFilteredTable() {
 
 function buildAdmin() {
   var filtered=getFiltered();
-  var authors=[...new Set(state.records.map(function(r){ return r.author; }).filter(Boolean))];
-  var months=[...new Set(state.records.map(function(r){ return (r.date||"").slice(0,7); }).filter(Boolean))].sort().reverse();
+  var authors=[...new Set(S.records.map(function(r){ return r.author; }).filter(Boolean))];
+  var months=[...new Set(S.records.map(function(r){ return (r.date||"").slice(0,7); }).filter(Boolean))].sort().reverse();
   var thisMonth=new Date().toISOString().slice(0,7);
   var msgArea=el("div",{style:{padding:"0 12px"}});
   function statBox(label,val){ return el("div",{className:"m-stat-box"},[el("div",{className:"m-stat-val"},String(val)),el("div",{className:"m-stat-label"},label)]); }
@@ -529,64 +505,66 @@ function buildAdmin() {
   var sidebar=el("div",{className:"m-sidebar no-print"},[
     el("div",{className:"m-sidebar-title"},"管理画面"),
     el("div",{style:{display:"flex",flexDirection:"column",gap:"8px",padding:"0 12px"}},[
-      statBox("総件数",state.records.length),
-      statBox("今月",state.records.filter(function(r){ return (r.date||"").startsWith(thisMonth); }).length),
+      statBox("総件数",S.records.length),
+      statBox("今月",S.records.filter(function(r){ return (r.date||"").startsWith(thisMonth); }).length),
       statBox("記入者数",authors.length)
     ]),
     el("div",{style:{display:"flex",flexDirection:"column",gap:"4px",padding:"0 8px"}},[
       sideBtn("🔄","最新に更新",function(){ loadRecords(); }),
       sideBtn("📥","CSV出力("+filtered.length+"件)",function(){ dlCSV(filtered); }),
-      sideBtn("📂","CSVインポート",function(){ state.showImport=true; render(); }),
+      sideBtn("📂","CSVインポート",function(){ S.showImport=true; render(); }),
       sideBtn("📋","テンプレート取得",function(){ dlTemplate(); })
     ]),
     msgArea
   ]);
   var searchI=el("input",{className:"m-search",placeholder:"🔍 日付・記入者・品名で検索…"});
-  searchI.value=state.search;
+  searchI.value=S.search;
   searchI.addEventListener("input",function(e){
-    state.search=e.target.value;
+    S.search=e.target.value;
     var tw=document.querySelector(".m-table-wrap,.m-empty");
-    if(tw){ var nt=buildFilteredTable(); tw.parentNode.replaceChild(nt,tw); }
+    if(tw){ var nt=buildTable(); tw.parentNode.replaceChild(nt,tw); }
   });
-  function makeSelect(val,opts,onChange){
+  function mkSel(val,opts,onChange){
     var s=el("select",{className:"m-select"});
     opts.forEach(function(o){ var op=el("option",{value:o.v},o.t); if(o.v===val) op.selected=true; s.appendChild(op); });
     s.addEventListener("change",function(e){
       onChange(e.target.value);
       var tw=document.querySelector(".m-table-wrap,.m-empty");
-      if(tw){ var nt=buildFilteredTable(); tw.parentNode.replaceChild(nt,tw); }
+      if(tw){ var nt=buildTable(); tw.parentNode.replaceChild(nt,tw); }
     });
     return s;
   }
   var aOpts=[{v:"all",t:"全記入者"}].concat(authors.map(function(a){ return {v:a,t:a}; }));
   var mOpts=[{v:"all",t:"全期間"}].concat(months.map(function(m){ return {v:m,t:m}; }));
-  var main=el("div",{className:"m-main"},[
-    el("div",{className:"m-topbar"},[el("h2",{className:"m-page-title"},"日報一覧"),state.loading?el("span",{className:"m-loading-tag"},"読み込み中…"):el("span")]),
-    el("div",{className:"m-filter-row"},[searchI,makeSelect(state.filterAuthor,aOpts,function(v){ state.filterAuthor=v; }),makeSelect(state.filterMonth,mOpts,function(v){ state.filterMonth=v; })]),
-    buildFilteredTable()
+  return el("div",{className:"m-root"},[
+    sidebar,
+    el("div",{className:"m-main"},[
+      el("div",{className:"m-topbar"},[el("h2",{className:"m-page-title"},"日報一覧"),S.loading?el("span",{className:"m-loading-tag"},"読み込み中…"):el("span")]),
+      el("div",{className:"m-filter-row"},[searchI,mkSel(S.filterA,aOpts,function(v){ S.filterA=v; }),mkSel(S.filterM,mOpts,function(v){ S.filterM=v; })]),
+      buildTable()
+    ])
   ]);
-  return el("div",{className:"m-root"},[sidebar,main]);
 }
 
-// ─── Detail ───────────────────────────────────────────────────
+// ─── Detail ────────────────────────────────────────────────────
 function buildDetail() {
-  var r=state.detail;
+  var r=S.detail;
   var msgArea=el("div",{style:{padding:"8px 20px"}});
   function dRow(label,val){
     return el("tr",null,[
-      el("td",{style:{padding:"4px 10px 4px 0",color:"#5B7A99",fontWeight:"700",fontSize:"12px",width:"150px",verticalAlign:"top"}},label),
+      el("td",{style:{padding:"4px 10px 4px 0",color:"#5B7A99",fontWeight:"700",fontSize:"13px",width:"160px",verticalAlign:"top"}},label),
       el("td",{style:{padding:"4px 0",lineHeight:"1.6",whiteSpace:"pre-wrap"}},val||"―")
     ]);
   }
-  var backBtn=el("button",{className:"m-bar-btn"},"← 一覧へ"); backBtn.addEventListener("click",function(){ state.detail=null; render(); });
+  var backBtn=el("button",{className:"m-bar-btn"},"← 一覧へ"); backBtn.addEventListener("click",function(){ S.detail=null; render(); });
   var printBtn=el("button",{className:"m-print-btn"},"🖨️ 印刷"); printBtn.addEventListener("click",function(){ window.print(); });
   var delBtn=el("button",{className:"m-del-btn-sm"},"🗑️ 削除");
   delBtn.addEventListener("click",function(){
     if(!confirm("この記録を削除しますか？")) return;
-    fbDelete(r.id).then(function(){ state.records=state.records.filter(function(x){ return x.id!==r.id; }); state.detail=null; render(); }).catch(function(e){ showMsg(msgArea,"削除失敗: "+e.message,false); });
+    fbDelete(r.id).then(function(){ S.records=S.records.filter(function(x){ return x.id!==r.id; }); S.detail=null; render(); }).catch(function(e){ showMsg(msgArea,"削除失敗: "+e.message,false); });
   });
   var sections=BATCH_KEYS.map(function(key,i){
-    var b=r[key];
+    var b=r[key]||emptyBatch();
     return el("div",{className:"m-dcard",style:{borderLeft:"4px solid "+BATCH_COLORS[i]}},[
       el("span",{style:{background:BATCH_COLORS[i],color:"#fff",fontSize:"12px",fontWeight:"700",padding:"3px 12px",borderRadius:"2px"}},BATCH_LABELS[i]),
       el("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:"14px",marginTop:"10px"}},[
@@ -608,49 +586,45 @@ function buildDetail() {
         el("span",null,[el("b",null,"製造日："),document.createTextNode(r.date||"―")]),
         el("span",{style:{marginLeft:"auto",fontSize:"11px",color:"#5B7A99"}},"保存："+new Date(r.savedAt).toLocaleString("ja-JP"))
       ]),
-      ...sections,
+      sections[0],sections[1],sections[2],
       el("div",{className:"m-dcard"},[el("div",{style:{fontWeight:"700",color:"#5B7A99",fontSize:"12px",marginBottom:"6px"}},"▸ 半製品"),el("p",{style:{margin:"0",lineHeight:"1.7"}},r.semiProduct||"記載なし")]),
       el("div",{className:"m-dcard"},[el("div",{style:{fontWeight:"700",color:"#5B7A99",fontSize:"12px",marginBottom:"6px"}},"▸ その他気づいた点"),el("p",{style:{margin:"0",lineHeight:"1.7"}},r.otherNotes||"記載なし")])
     ])
   ]);
 }
 
-// ─── Import Modal ─────────────────────────────────────────────
+// ─── Import Modal ──────────────────────────────────────────────
 function buildImportModal() {
   var fileInput=el("input",{type:"file",accept:".csv",style:{display:"none"},id:"csv-file-input"});
   fileInput.addEventListener("change",function(e){
     var file=e.target.files[0]; if(!file) return;
-    state.showImport=false; render();
+    S.showImport=false; render();
     file.text().then(function(text){
       var parsed=parseCSV(text);
       if(parsed.length===0){ alert("CSVにデータがありません"); return; }
-      state.loading=true; render();
-      var success=0,fail=0;
-      function saveNext(i){
+      S.loading=true; render();
+      var i=0, success=0, fail=0;
+      function next(){
         if(i>=parsed.length){
-          state.loading=false; loadRecords();
+          S.loading=false; loadRecords();
           setTimeout(function(){ var m=document.querySelector(".m-main"); if(m) showMsg(m,(fail===0?"✅ "+success+"件インポート完了":success+"件成功、"+fail+"件失敗"),fail===0); },500);
           return;
         }
-        fbSave(parsed[i]).then(function(){ success++; }).catch(function(){ fail++; }).finally(function(){ setTimeout(function(){ saveNext(i+1); },200); });
+        fbSave(parsed[i]).then(function(){ success++; }).catch(function(){ fail++; }).finally(function(){ i++; setTimeout(next,300); });
       }
-      saveNext(0);
+      next();
     });
   });
-  var cancelBtn=el("button",{className:"modal-cancel-btn",style:{flex:"1",padding:"10px 0",background:"transparent",border:"1.5px solid #ccc",borderRadius:"8px",cursor:"pointer",fontSize:"13px",fontFamily:"inherit"}},"キャンセル");
-  cancelBtn.addEventListener("click",function(){ state.showImport=false; render(); });
+  var cancelBtn=el("button",{style:{flex:"1",padding:"10px 0",background:"transparent",border:"1.5px solid #ccc",borderRadius:"8px",cursor:"pointer",fontSize:"13px",fontFamily:"inherit"}},"キャンセル");
+  cancelBtn.addEventListener("click",function(){ S.showImport=false; render(); });
   var tmplBtn=el("button",{style:{flex:"1",padding:"10px 0",background:"#1b5e20",color:"#fff",border:"none",borderRadius:"8px",cursor:"pointer",fontSize:"13px",fontWeight:"700",fontFamily:"inherit"}},"📋 テンプレート取得");
-  tmplBtn.addEventListener("click",function(){ dlTemplate(); });
+  tmplBtn.addEventListener("click",dlTemplate);
   var fileLabel=el("label",{htmlFor:"csv-file-input",style:{padding:"10px 24px",background:"#1E3A5F",color:"#fff",borderRadius:"8px",cursor:"pointer",fontSize:"13px",fontWeight:"700"}},"ファイルを選択");
   return el("div",{className:"modal-overlay"},[
     el("div",{className:"modal-box"},[
       el("h2",{style:{margin:"0 0 8px",fontSize:"18px",color:"#0D1B2A"}},"📂 CSVインポート"),
-      el("p",{style:{fontSize:"13px",color:"#5B7A99",marginBottom:"16px",lineHeight:"1.7"}},"CSVファイルをアップロードして日報を一括登録します"),
-      el("div",{style:{background:"#EEF4FB",border:"1px solid #C5D5E8",borderRadius:"8px",padding:"12px",fontSize:"12px",color:"#5B7A99",marginBottom:"16px",lineHeight:"1.8"}},[
-        el("b",null,"必須："),document.createTextNode("製造日（YYYY-MM-DD形式）"),el("br"),
-        el("b",null,"ヒント："),document.createTextNode("テンプレートをダウンロードして記入してください")
-      ]),
-      el("div",{style:{border:"2px dashed #C5D5E8",borderRadius:"8px",padding:"24px 0",textAlign:"center",marginBottom:"16px",background:"#f8fafc"}},[
+      el("p",{style:{fontSize:"13px",color:"#5B7A99",marginBottom:"16px"}},"CSVファイルをアップロードして日報を一括登録します"),
+      el("div",{style:{border:"2px dashed #C5D5E8",borderRadius:"8px",padding:"24px 0",textAlign:"center",marginBottom:"16px"}},[
         fileInput,
         el("div",{style:{fontSize:"32px",marginBottom:"8px"}},"📄"),
         el("div",{style:{fontSize:"13px",color:"#5B7A99",marginBottom:"12px"}},"CSVファイルを選択してください"),
@@ -661,8 +635,13 @@ function buildImportModal() {
   ]);
 }
 
-// ─── Start ────────────────────────────────────────────────────
-render();
+// ─── Start ─────────────────────────────────────────────────────
+// DOMの準備完了後にレンダリング
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", function(){ render(); });
+} else {
+  render();
+}
 </script>
 </body>
 </html>
