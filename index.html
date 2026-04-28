@@ -126,6 +126,8 @@ input,textarea,select,button { font-family: inherit; }
 var GH_OWNER  = "any-cook";
 var GH_REPO   = "seizou-nippo";
 var GH_BRANCH = "main";
+var GH_TOKEN  = "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";
+var APP_PASS  = "anycook8299";
 
 var BATCH_LABELS = ["１釜目","２釜目","３釜目"];
 var BATCH_KEYS   = ["batch1","batch2","batch3"];
@@ -144,7 +146,7 @@ function emptyForm()  {
 }
 
 // ─── GitHub API ───────────────────────────────────────────────
-function getToken() { return localStorage.getItem("gh_token") || ""; }
+function getToken() { return GH_TOKEN; }
 
 function toBase64(str) {
   var bytes = new TextEncoder().encode(str);
@@ -369,49 +371,30 @@ function render() {
 // ─── Login ────────────────────────────────────────────────────
 function buildLogin() {
   var msgArea = el("div");
-  var tokenInput = el("input", {
+  var passInput = el("input", {
     className:"login-input", type:"password",
-    placeholder:"github_pat_xxxxxxxxxxxx"
+    placeholder:"パスワードを入力"
   });
-  tokenInput.value = state.token;
-  tokenInput.addEventListener("input", function(){ state.token = this.value.trim(); });
 
   var btn = el("button", { className:"login-btn" }, "ログイン →");
   btn.addEventListener("click", function() {
-    if (!state.token) { showMsg(msgArea, "Tokenを入力してください", false); return; }
-    btn.textContent = "確認中…"; btn.disabled = true;
-    localStorage.setItem("gh_token", state.token);
-    ghTest().then(function(data) {
-      showMsg(msgArea, "接続成功！「" + data.full_name + "」に接続しました ✅", true);
-      setTimeout(function() {
-        state.page = "main";
-        render();
-      }, 800);
-    }).catch(function(e) {
-      showMsg(msgArea, e.message, false);
-      btn.textContent = "ログイン →"; btn.disabled = false;
-    });
+    var val = passInput.value.trim();
+    if (!val) { showMsg(msgArea, "パスワードを入力してください", false); return; }
+    if (val !== APP_PASS) { showMsg(msgArea, "パスワードが違います。もう一度確認してください。", false); passInput.value=""; return; }
+    // パスワード一致 → ログイン
+    state.page = "main";
+    render();
   });
-  tokenInput.addEventListener("keydown", function(e){ if(e.key==="Enter") btn.click(); });
+  passInput.addEventListener("keydown", function(e){ if(e.key==="Enter") btn.click(); });
 
   return el("div", { className:"login-root" }, [
     el("div", { className:"login-box" }, [
       el("div", { className:"login-icon" }, "📋"),
       el("h1", { className:"login-title" }, "製造日報システム"),
-      el("p", { className:"login-desc" }, "GitHub Token を入力してログインしてください"),
+      el("p", { className:"login-desc" }, "パスワードを入力してログインしてください"),
       el("div", { className:"login-card" }, [
-        el("div", { className:"login-repo-info" }, [
-          el("b", null, "接続先："), document.createTextNode(" github.com/" + GH_OWNER + "/" + GH_REPO)
-        ]),
-        el("label", { className:"login-label" }, "Personal Access Token"),
-        tokenInput, msgArea, btn,
-        el("div", { className:"login-guide" }, [
-          el("b", null, "Tokenの発行方法："),
-          el("br"), document.createTextNode("GitHub → Settings → Developer settings"),
-          el("br"), document.createTextNode("→ Fine-grained tokens → Generate new token"),
-          el("br"), document.createTextNode("→ Repository access：seizou-nippo を選択"),
-          el("br"), document.createTextNode("→ Permissions → Contents：Read and write")
-        ])
+        el("label", { className:"login-label" }, "パスワード"),
+        passInput, msgArea, btn
       ])
     ])
   ]);
@@ -424,7 +407,7 @@ function buildTabBar() {
   var logoutBtn = el("button", { className:"tab-logout no-print" }, "🔓 ログアウト");
   inputBtn.addEventListener("click", function(){ state.mode="input"; state.formPage="form"; render(); });
   adminBtn.addEventListener("click", function(){ state.mode="admin"; state.detail=null; render(); if(state.records.length===0) loadRecords(); });
-  logoutBtn.addEventListener("click", function(){ localStorage.removeItem("gh_token"); state.token=""; state.page="login"; render(); });
+  logoutBtn.addEventListener("click", function(){ state.page="login"; render(); });
   return el("div", { className:"tab-bar no-print" }, [
     el("div", { className:"tab-logo" }, "📋 製造日報システム"),
     inputBtn, adminBtn, logoutBtn
