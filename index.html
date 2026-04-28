@@ -126,7 +126,7 @@ input,textarea,select,button { font-family: inherit; }
 var GH_OWNER  = "any-cook";
 var GH_REPO   = "seizou-nippo";
 var GH_BRANCH = "main";
-var GH_TOKEN  = "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";
+var GH_TOKEN  = ""; // localStorageから取得
 var APP_PASS  = "anycook8299";
 
 var BATCH_LABELS = ["１釜目","２釜目","３釜目"];
@@ -146,7 +146,7 @@ function emptyForm()  {
 }
 
 // ─── GitHub API ───────────────────────────────────────────────
-function getToken() { return GH_TOKEN; }
+function getToken() { return localStorage.getItem("gh_token") || GH_TOKEN; }
 
 function toBase64(str) {
   var bytes = new TextEncoder().encode(str);
@@ -371,23 +371,76 @@ function render() {
 // ─── Login ────────────────────────────────────────────────────
 function buildLogin() {
   var msgArea = el("div");
+  var showTokenSetup = false;
+
+  // パスワードログイン画面
   var passInput = el("input", {
     className:"login-input", type:"password",
     placeholder:"パスワードを入力"
   });
-
   var btn = el("button", { className:"login-btn" }, "ログイン →");
   btn.addEventListener("click", function() {
     var val = passInput.value.trim();
     if (!val) { showMsg(msgArea, "パスワードを入力してください", false); return; }
     if (val !== APP_PASS) { showMsg(msgArea, "パスワードが違います。もう一度確認してください。", false); passInput.value=""; return; }
-    // パスワード一致 → ログイン
+    if (!getToken()) { showMsg(msgArea, "管理者がTokenを設定していません。管理者ログインからTokenを設定してください。", false); return; }
     state.page = "main";
     render();
-    // 管理画面用データを事前読み込み開始
     loadRecords();
   });
   passInput.addEventListener("keydown", function(e){ if(e.key==="Enter") btn.click(); });
+
+  // 管理者Token設定画面
+  var adminPassInput = el("input", { className:"login-input", type:"password", placeholder:"管理者パスワード" });
+  var tokenInput = el("input", { className:"login-input", type:"password", placeholder:"github_pat_xxxxxxxxxxxx" });
+  var saveTokenBtn = el("button", { className:"login-btn", style:"background:linear-gradient(135deg,#1b5e20,#2e7d32);margin-top:8px;" }, "💾 Tokenを保存する");
+  var adminMsgArea = el("div");
+
+  saveTokenBtn.addEventListener("click", function() {
+    var ap = adminPassInput.value.trim();
+    var tk = tokenInput.value.trim();
+    if (ap !== "admin" + APP_PASS) { showMsg(adminMsgArea, "管理者パスワードが違います", false); return; }
+    if (!tk) { showMsg(adminMsgArea, "Tokenを入力してください", false); return; }
+    // Token接続テスト
+    saveTokenBtn.textContent = "確認中…"; saveTokenBtn.disabled = true;
+    fetch("https://api.github.com/repos/" + GH_OWNER + "/" + GH_REPO, {
+      headers: { "Authorization": "token " + tk, "Accept": "application/vnd.github+json" }
+    }).then(function(res) {
+      if (res.ok) {
+        localStorage.setItem("gh_token", tk);
+        showMsg(adminMsgArea, "✅ Token保存完了！接続成功しました", true);
+        saveTokenBtn.textContent = "💾 Tokenを保存する"; saveTokenBtn.disabled = false;
+      } else {
+        showMsg(adminMsgArea, "❌ Token認証失敗。Tokenを確認してください", false);
+        saveTokenBtn.textContent = "💾 Tokenを保存する"; saveTokenBtn.disabled = false;
+      }
+    }).catch(function() {
+      showMsg(adminMsgArea, "❌ 接続エラー", false);
+      saveTokenBtn.textContent = "💾 Tokenを保存する"; saveTokenBtn.disabled = false;
+    });
+  });
+
+  // 管理者リンク
+  var adminLink = el("div", { style:"text-align:center;margin-top:16px;" });
+  var adminBtn2 = el("button", { style:"background:transparent;border:none;color:#aaa;font-size:11px;cursor:pointer;text-decoration:underline;font-family:inherit;" }, "管理者ログイン（Token設定）");
+  adminBtn2.addEventListener("click", function() {
+    showTokenSetup = !showTokenSetup;
+    tokenSection.style.display = showTokenSetup ? "block" : "none";
+    adminBtn2.textContent = showTokenSetup ? "▲ 閉じる" : "管理者ログイン（Token設定）";
+  });
+  adminLink.appendChild(adminBtn2);
+
+  var tokenSection = el("div", { style:"display:none;margin-top:16px;" }, [
+    el("div", { style:"background:#f5f5f5;border-radius:12px;padding:16px;" }, [
+      el("div", { style:"font-size:13px;font-weight:700;color:#444;margin-bottom:12px;" }, "🔑 管理者Token設定"),
+      el("div", { style:"font-size:11px;color:#888;margin-bottom:8px;" }, "管理者パスワード（admin + 通常パスワード）"),
+      adminPassInput,
+      el("div", { style:"font-size:11px;color:#888;margin:8px 0;" }, "GitHub Personal Access Token"),
+      tokenInput,
+      adminMsgArea,
+      saveTokenBtn
+    ])
+  ]);
 
   return el("div", { className:"login-root" }, [
     el("div", { className:"login-box" }, [
@@ -396,7 +449,9 @@ function buildLogin() {
       el("p", { className:"login-desc" }, "パスワードを入力してログインしてください"),
       el("div", { className:"login-card" }, [
         el("label", { className:"login-label" }, "パスワード"),
-        passInput, msgArea, btn
+        passInput, msgArea, btn,
+        adminLink,
+        tokenSection
       ])
     ])
   ]);
