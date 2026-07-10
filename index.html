@@ -417,28 +417,47 @@ function buildForm() {
   otherT.addEventListener("input",function(e){ S.form.otherNotes=e.target.value; });
   // ホワイトボード画像アップロード
   var wbPreview = el("div",{style:{marginTop:"8px"}});
+  // 編集モードで既存画像があれば表示
+  if (f.wbImage) {
+    var existImg = el("img",{style:{width:"100%",borderRadius:"8px",maxHeight:"200px",objectFit:"contain"}});
+    existImg.src = f.wbImage;
+    wbPreview.appendChild(existImg);
+  }
   var wbFileInput = el("input",{type:"file",accept:"image/*",style:{display:"none"},id:"wb-file-input"});
-  var wbLabel = el("label",{htmlFor:"wb-file-input",style:{display:"inline-block",padding:"10px 20px",background:"#1E3A5F",color:"#fff",borderRadius:"12px",cursor:"pointer",fontSize:"14px",fontWeight:"700"}},"📷 写真を選択");
-  var wbStatus = el("div",{style:{fontSize:"12px",color:"#8B6A3E",marginTop:"6px"}});
+  var wbLabel = el("label",{htmlFor:"wb-file-input",style:{display:"inline-block",padding:"10px 20px",background:"#1E3A5F",color:"#fff",borderRadius:"12px",cursor:"pointer",fontSize:"14px",fontWeight:"700"}},f.wbImage?"📷 写真を変更する":"📷 写真を選択");
+  var wbStatus = el("div",{style:{fontSize:"12px",color:"#8B6A3E",marginTop:"6px"}},f.wbImage?"✅ 画像が保存されています":"");
   wbFileInput.addEventListener("change",function(e){
     var file = e.target.files[0];
     if (!file) return;
     wbStatus.textContent = "圧縮中…";
     compressImage(file, 800, 0.7).then(function(base64){
       S.form.wbImage = base64;
-      wbStatus.textContent = "✅ 画像を選択しました";
+      wbStatus.textContent = "✅ 新しい画像を選択しました";
+      wbLabel.textContent = "📷 写真を変更する";
       var img = el("img",{style:{width:"100%",borderRadius:"8px",marginTop:"8px",maxHeight:"200px",objectFit:"contain"}});
       img.src = base64;
       wbPreview.innerHTML = "";
       wbPreview.appendChild(img);
     });
   });
+  // 画像削除ボタン（編集モードで既存画像がある場合）
+  var wbDeleteBtn = f.wbImage ? (function(){
+    var btn = el("button",{style:{padding:"6px 14px",background:"#fdecea",color:"#c62828",border:"1px solid #e57373",borderRadius:"8px",cursor:"pointer",fontSize:"12px",fontFamily:"inherit",marginTop:"8px"}},"🗑️ 画像を削除する");
+    btn.addEventListener("click",function(){
+      S.form.wbImage = "";
+      wbPreview.innerHTML = "";
+      wbStatus.textContent = "画像を削除しました";
+      wbLabel.textContent = "📷 写真を選択";
+      btn.style.display = "none";
+    });
+    return btn;
+  })() : el("span");
   var wbCard = el("div",{className:"i-card"},[
     el("div",{className:"i-card-header"},[el("span",{className:"i-shead"},"▸"),el("span",{className:"i-shead-title"},"ホワイトボード写真")]),
     el("div",{className:"i-field"},[
       el("label",null,"ホワイトボードの写真を撮影してください"),
       el("div",{style:{textAlign:"center",padding:"16px 0"}},[wbFileInput, wbLabel]),
-      wbStatus, wbPreview
+      wbStatus, wbPreview, wbDeleteBtn
     ])
   ]);
 
