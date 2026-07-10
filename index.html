@@ -301,7 +301,8 @@ var S = {
   formPage:"form", submitted:null,
   records:[], detail:null,
   search:"", filterA:"all", filterM:"all",
-  showImport:false, loading:false
+  showImport:false, loading:false,
+  editMode:false, editId:null
 };
 
 function render() {
@@ -441,14 +442,27 @@ function buildForm() {
     ])
   ]);
 
-  var submitBtn=el("button",{className:"i-submit-btn"},"日報を確認する　→");
+  var submitBtn=el("button",{className:"i-submit-btn"},S.editMode?"✏️ 編集内容を確認する　→":"日報を確認する　→");
   submitBtn.addEventListener("click",function(){
     var r=JSON.parse(JSON.stringify(S.form));
-    r.savedAt=new Date().toISOString(); r.id=Date.now().toString();
+    if (!S.editMode) {
+      r.savedAt=new Date().toISOString(); r.id=Date.now().toString();
+    }
     S.submitted=r; S.formPage="preview"; render();
   });
   return el("div",{className:"i-root"},[el("div",{className:"i-container"},[
-    el("div",{className:"i-header"},[el("div",{className:"i-accent"}),el("div",{style:{flex:"1"}},[el("div",{className:"i-header-label"},"DAILY PRODUCTION REPORT"),el("h1",{className:"i-title"},"製造日報")])]),
+    el("div",{className:"i-header"},[
+      el("div",{className:"i-accent"}),
+      el("div",{style:{flex:"1"}},[
+        el("div",{className:"i-header-label"},S.editMode?"EDIT RECORD":"DAILY PRODUCTION REPORT"),
+        el("h1",{className:"i-title"},S.editMode?"日報を編集":"製造日報")
+      ]),
+      S.editMode ? (function(){
+        var cb=el("button",{style:{padding:"6px 12px",background:"transparent",border:"1.5px solid #c8b47a",borderRadius:"20px",cursor:"pointer",fontSize:"12px",color:"#8B6A3E",fontFamily:"inherit"}},"✕ 編集キャンセル");
+        cb.addEventListener("click",function(){ S.editMode=false; S.editId=null; S.form=emptyForm(); S.mode="admin"; render(); });
+        return cb;
+      })() : el("span")
+    ]),
     el("div",{className:"i-meta-row"},[
       el("div",{className:"i-field",style:{flex:"1"}},[el("label",null,"記入者"),authorSel]),
       el("div",{className:"i-field",style:{flex:"1"}},[el("label",null,"製造日"),dateI])
@@ -480,23 +494,34 @@ function buildPreview() {
       ])])
     ]);
   }
-  var saveBtn=el("button",{className:"i-save-btn"},"💾 Firebaseに保存する（管理画面に反映）");
+  var isEdit = S.editMode;
+  var saveBtn=el("button",{className:"i-save-btn"},isEdit?"✏️ 編集内容を保存する":"💾 Firebaseに保存する（管理画面に反映）");
   saveBtn.addEventListener("click",function(){
     saveBtn.textContent="保存中…"; saveBtn.disabled=true;
     fbSave(r).then(function(){
-      showMsg(msgArea,"✅ 保存しました！管理画面から確認できます",true);
-      saveBtn.textContent="💾 Firebaseに保存する（管理画面に反映）"; saveBtn.disabled=false;
+      if (isEdit) {
+        showMsg(msgArea,"✅ 編集内容を保存しました！",true);
+        S.editMode=false; S.editId=null;
+      } else {
+        showMsg(msgArea,"✅ 保存しました！管理画面から確認できます",true);
+      }
+      saveBtn.textContent=isEdit?"✏️ 編集内容を保存する":"💾 Firebaseに保存する（管理画面に反映）";
+      saveBtn.disabled=false;
     }).catch(function(e){
       showMsg(msgArea,"❌ 保存失敗: "+e.message,false);
-      saveBtn.textContent="💾 Firebaseに保存する（管理画面に反映）"; saveBtn.disabled=false;
+      saveBtn.textContent=isEdit?"✏️ 編集内容を保存する":"💾 Firebaseに保存する（管理画面に反映）";
+      saveBtn.disabled=false;
     });
   });
   var backBtn=el("button",{className:"i-back-btn"},"← 修正する");
   backBtn.addEventListener("click",function(){ S.formPage="form"; render(); });
   var printBtn=el("button",{className:"i-print-btn"},"🖨️ 印刷");
   printBtn.addEventListener("click",function(){ window.print(); });
-  var newBtn=el("button",{className:"i-new-btn"},"＋ 新しい日報を入力する");
-  newBtn.addEventListener("click",function(){ S.form=emptyForm(); S.formPage="form"; S.submitted=null; render(); });
+  var newBtn=el("button",{className:"i-new-btn"},isEdit?"🗂️ 管理画面へ戻る":"＋ 新しい日報を入力する");
+  newBtn.addEventListener("click",function(){
+    if (isEdit) { S.editMode=false; S.editId=null; S.form=emptyForm(); S.submitted=null; S.mode="admin"; render(); loadRecords(); }
+    else { S.form=emptyForm(); S.formPage="form"; S.submitted=null; render(); }
+  });
   return el("div",{className:"i-root"},[el("div",{className:"i-container"},[
     el("div",{className:"i-header"},[el("div",{className:"i-accent"}),el("div",{style:{flex:"1"}},[el("div",{className:"i-header-label"},"CONFIRM & SAVE"),el("h1",{className:"i-title"},"確認・保存")])]),
     msgArea,
@@ -647,6 +672,17 @@ function buildDetail() {
     ]);
   }
   var backBtn=el("button",{className:"m-bar-btn"},"← 一覧へ"); backBtn.addEventListener("click",function(){ S.detail=null; render(); });
+  var editBtn=el("button",{style:{padding:"6px 12px",background:"#E65100",color:"#fff",border:"none",borderRadius:"3px",cursor:"pointer",fontSize:"12px",fontFamily:"inherit",fontWeight:"700"}},"✏️ 編集する");
+  editBtn.addEventListener("click",function(){
+    // 編集モードで入力画面を開く
+    S.form = JSON.parse(JSON.stringify(S.detail));
+    S.editMode = true;
+    S.editId = S.detail.id;
+    S.mode = "input";
+    S.formPage = "form";
+    S.detail = null;
+    render();
+  });
   var printBtn=el("button",{className:"m-print-btn"},"🖨️ 印刷"); printBtn.addEventListener("click",function(){ window.print(); });
   var delBtn=el("button",{className:"m-del-btn-sm"},"🗑️ 削除");
   delBtn.addEventListener("click",function(){
@@ -668,7 +704,7 @@ function buildDetail() {
     ]);
   });
   return el("div",{style:{minHeight:"calc(100vh - 50px)",background:"#EEF4FB"}},[
-    el("div",{className:"m-detail-bar no-print"},[backBtn,el("span",{style:{fontWeight:"700",color:"#0D1B2A"}},"日報詳細　"+r.date),printBtn,delBtn]),
+    el("div",{className:"m-detail-bar no-print"},[backBtn,el("span",{style:{fontWeight:"700",color:"#0D1B2A"}},"日報詳細　"+r.date),editBtn,printBtn,delBtn]),
     msgArea,
     el("div",{className:"m-detail-body"},[
       el("div",{className:"m-dmeta"},[
