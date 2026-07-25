@@ -160,7 +160,8 @@ function emptyBatch() {
 function emptyForm() {
   return {author:"",date:"",batch1:emptyBatch(),batch2:emptyBatch(),batch3:emptyBatch(),semiProduct:"",
     otherNotes:"",
-    extraItems:[] // [{note:"", image:""}]
+    extraItems:[], // [{note:"", image:""}]
+    wbImage:""    // ホワイトボード写真
   };
 }
 
@@ -389,6 +390,68 @@ function buildExtraItemsCard(f) {
   return card;
 }
 
+function buildWbCard(f) {
+  if (!f.wbImage) f.wbImage = "";
+  var preview = document.createElement("div");
+  if (f.wbImage) {
+    var pImg = document.createElement("img");
+    pImg.src = f.wbImage;
+    pImg.style.cssText = "width:100%;border-radius:8px;max-height:220px;object-fit:contain;margin-bottom:6px;";
+    preview.appendChild(pImg);
+  }
+  var fileId = "wb-main-file";
+  var fileInput = document.createElement("input");
+  fileInput.type = "file"; fileInput.accept = "image/*";
+  fileInput.style.display = "none"; fileInput.id = fileId;
+  var fileLabel = document.createElement("label");
+  fileLabel.htmlFor = fileId;
+  fileLabel.style.cssText = "display:inline-block;padding:10px 20px;background:#1E3A5F;color:#fff;border-radius:12px;cursor:pointer;font-size:14px;font-weight:700;";
+  fileLabel.textContent = f.wbImage ? "📷 写真を変更する" : "📷 写真を選択する";
+  var status = document.createElement("div");
+  status.style.cssText = "font-size:12px;color:#8B6A3E;margin-top:6px;";
+  status.textContent = f.wbImage ? "✅ 画像が保存されています" : "";
+  fileInput.addEventListener("change", function(e) {
+    var file = e.target.files[0]; if (!file) return;
+    status.textContent = "圧縮中…";
+    compressImage(file, 800, 0.7).then(function(base64) {
+      S.form.wbImage = base64;
+      preview.innerHTML = "";
+      var img = document.createElement("img");
+      img.src = base64;
+      img.style.cssText = "width:100%;border-radius:8px;max-height:220px;object-fit:contain;margin-bottom:6px;";
+      preview.appendChild(img);
+      fileLabel.textContent = "📷 写真を変更する";
+      status.textContent = "✅ 画像を選択しました";
+      delBtn.style.display = "inline-block";
+    });
+  });
+  var delBtn = document.createElement("button");
+  delBtn.style.cssText = "display:"+(f.wbImage?"inline-block":"none")+";margin-left:8px;padding:8px 12px;background:#fdecea;color:#c62828;border:1px solid #e57373;border-radius:10px;cursor:pointer;font-size:12px;font-family:inherit;";
+  delBtn.textContent = "🗑️ 写真削除";
+  delBtn.addEventListener("click", function() {
+    S.form.wbImage = "";
+    preview.innerHTML = "";
+    fileLabel.textContent = "📷 写真を選択する";
+    status.textContent = "画像を削除しました";
+    delBtn.style.display = "none";
+  });
+  var card = document.createElement("div");
+  card.className = "i-card";
+  var header = document.createElement("div"); header.className = "i-card-header";
+  var icon = document.createElement("span"); icon.className = "i-shead"; icon.textContent = "▸";
+  var title = document.createElement("span"); title.className = "i-shead-title"; title.textContent = "🖊️ ホワイトボード写真";
+  header.appendChild(icon); header.appendChild(title);
+  var label = document.createElement("label");
+  label.style.cssText = "display:block;font-size:16px;color:#222;font-weight:700;margin-bottom:10px;";
+  label.textContent = "本日のホワイトボードを撮影してください";
+  var btnRow = document.createElement("div");
+  btnRow.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;";
+  btnRow.appendChild(fileInput); btnRow.appendChild(fileLabel); btnRow.appendChild(delBtn);
+  card.appendChild(header); card.appendChild(label);
+  card.appendChild(preview); card.appendChild(btnRow); card.appendChild(status);
+  return card;
+}
+
 // ─── DOM helper ────────────────────────────────────────────────
 function el(tag, attrs, children) {
   var e = document.createElement(tag);
@@ -612,6 +675,7 @@ function buildForm() {
     el("div",{className:"i-card"},[el("div",{className:"i-card-header"},[el("span",{className:"i-shead"},"▸"),el("span",{className:"i-shead-title"},"半製品")]),fld("半製品があれば入力してください",semiT)]),
     el("div",{className:"i-card"},[el("div",{className:"i-card-header"},[el("span",{className:"i-shead"},"▸"),el("span",{className:"i-shead-title"},"その他")]),fld("その他気づいた点があれば入力してください",otherT)]),
     buildExtraItemsCard(f),
+    buildWbCard(f),
     submitBtn
   ])]);
 }
@@ -698,6 +762,21 @@ function buildPreview() {
         wrap.appendChild(card);
       });
       return wrap;
+    })(),
+    (function(){
+      if (!r.wbImage) return el("span");
+      var card = document.createElement("div");
+      card.className = "i-card";
+      card.style.borderLeft = "4px solid #1A1208";
+      var h = document.createElement("div"); h.className = "i-card-header";
+      var ic = document.createElement("span"); ic.className = "i-shead"; ic.textContent = "▸";
+      var t = document.createElement("span"); t.className = "i-shead-title"; t.textContent = "🖊️ ホワイトボード写真";
+      h.appendChild(ic); h.appendChild(t); card.appendChild(h);
+      var img = document.createElement("img");
+      img.src = r.wbImage;
+      img.style.cssText = "width:100%;border-radius:8px;max-height:300px;object-fit:contain;";
+      card.appendChild(img);
+      return card;
     })(),
     el("div",{className:"i-save-box no-print"},[saveBtn]),
     el("div",{className:"no-print",style:{display:"flex",gap:"10px",marginBottom:"10px"}},[backBtn,printBtn]),
@@ -876,6 +955,21 @@ function buildDetail() {
       sections[0],sections[1],sections[2],
       el("div",{className:"m-dcard"},[el("div",{style:{fontWeight:"700",color:"#5B7A99",fontSize:"12px",marginBottom:"6px"}},"▸ 半製品"),el("p",{style:{margin:"0",lineHeight:"1.7"}},r.semiProduct||"記載なし")]),
       el("div",{className:"m-dcard"},[el("div",{style:{fontWeight:"700",color:"#5B7A99",fontSize:"12px",marginBottom:"6px"}},"▸ その他気づいた点"),el("p",{style:{margin:"0",lineHeight:"1.7"}},r.otherNotes||"記載なし")]),
+      (function(){
+        if (!r.wbImage) return el("span");
+        var card = document.createElement("div");
+        card.className = "m-dcard";
+        card.style.borderLeft = "4px solid #1A1208";
+        var t = document.createElement("div");
+        t.style.cssText = "font-weight:700;color:#5B7A99;font-size:12px;margin-bottom:8px;";
+        t.textContent = "▸ 🖊️ ホワイトボード写真";
+        card.appendChild(t);
+        var img = document.createElement("img");
+        img.src = r.wbImage;
+        img.style.cssText = "width:100%;border-radius:8px;max-height:400px;object-fit:contain;";
+        card.appendChild(img);
+        return card;
+      })(),
       (function(){
         if (!r.extraItems || r.extraItems.length===0) return el("span");
         var wrap = document.createElement("div");
