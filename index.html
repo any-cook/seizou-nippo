@@ -247,32 +247,6 @@ function compressImage(file, maxWidth, quality) {
   });
 }
 
-async function fbSaveImage(date, base64) {
-  var id = "wb_" + date + "_" + Date.now();
-  await setDoc(doc(db, "whiteboard", id), {
-    id: id, date: date, image: base64,
-    savedAt: new Date().toISOString()
-  });
-  return id;
-}
-
-async function fbLoadImages(date) {
-  var q = query(collection(db, "whiteboard"), orderBy("savedAt","desc"));
-  var snap = await getDocs(q);
-  var images = [];
-  snap.forEach(function(d) {
-    var data = d.data();
-    if (!date || data.date === date) {
-      images.push(data);
-    }
-  });
-  return images;
-}
-
-async function fbDeleteImage(id) {
-  await deleteDoc(doc(db, "whiteboard", id));
-}
-
 // ─── ExtraItems（追加メモ＋写真）────────────────────────────────
 function buildExtraItemCard(item, index, container) {
   var card = document.createElement("div");
@@ -479,8 +453,10 @@ function showMsg(container, text, isOk, ms) {
 }
 
 // ─── State ─────────────────────────────────────────────────────
+var _loggedIn = sessionStorage.getItem("nippo_auth") === "1";
 var S = {
-  page:"login", mode:"input", form:emptyForm(),
+  page: _loggedIn ? "main" : "login",
+  mode:"input", form:emptyForm(),
   formPage:"form", submitted:null,
   records:[], detail:null,
   search:"", filterA:"all", filterM:"all",
@@ -510,6 +486,7 @@ function buildLogin() {
   var btn = el("button",{className:"login-btn"},"ログイン →");
   btn.addEventListener("click",function() {
     if (passInput.value.trim()!==APP_PASS) { showMsg(msgArea,"パスワードが違います",false); passInput.value=""; return; }
+    sessionStorage.setItem("nippo_auth","1");
     S.page="main"; render(); loadRecords();
   });
   passInput.addEventListener("keydown",function(e){ if(e.key==="Enter") btn.click(); });
@@ -535,7 +512,7 @@ function buildTabBar() {
   var lb = el("button",{className:"tab-logout no-print"},"🔓 ログアウト");
   ib.addEventListener("click",function(){ S.mode="input"; S.formPage="form"; render(); });
   ab.addEventListener("click",function(){ S.mode="admin"; S.detail=null; render(); loadRecords(); });
-  lb.addEventListener("click",function(){ S.page="login"; S.records=[]; render(); });
+  lb.addEventListener("click",function(){ sessionStorage.removeItem("nippo_auth"); S.page="login"; S.records=[]; render(); });
   return el("div",{className:"tab-bar no-print"},[el("div",{className:"tab-logo"},"📋 製造日報システム"),ib,ab,lb]);
 }
 
@@ -583,12 +560,33 @@ function buildForm() {
     ]);
   }
   var authorSel=el("select",{className:"i-input"});
-  ["","養父","日高"].forEach(function(n){
+  var authorOpts=["","養父","日高","その他"];
+  authorOpts.forEach(function(n){
     var op=el("option",{value:n},n||"記入者を選択");
+    // 既存データで養父・日高以外の名前が入っている場合も選択状態にする
     if(f.author===n) op.selected=true;
     authorSel.appendChild(op);
   });
-  authorSel.addEventListener("change",function(e){ S.form.author=e.target.value; });
+  // 養父・日高以外の値が入っている場合は「その他」と表示し別途テキスト入力
+  var authorOtherWrap = el("div",{style:{marginTop:"8px",display:(f.author&&!["養父","日高",""].includes(f.author))?"block":"none"}});
+  var authorOtherInput = el("input",{className:"i-input",type:"text",placeholder:"氏名を入力"});
+  authorOtherInput.value = (f.author&&!["養父","日高",""].includes(f.author)) ? f.author : "";
+  authorOtherInput.addEventListener("input",function(e){ S.form.author=e.target.value; });
+  authorOtherWrap.appendChild(authorOtherInput);
+  authorSel.addEventListener("change",function(e){
+    if(e.target.value==="その他"){
+      S.form.author="";
+      authorOtherWrap.style.display="block";
+      authorOtherInput.focus();
+    } else {
+      S.form.author=e.target.value;
+      authorOtherWrap.style.display="none";
+    }
+  });
+  // 初期値が養父・日高以外なら「その他」を選択状態に
+  if(f.author&&!["養父","日高",""].includes(f.author)){
+    authorSel.value="その他";
+  }
   var dateI=el("input",{className:"i-input",type:"date"});
   dateI.value=f.date;
   dateI.addEventListener("input",function(e){ S.form.date=e.target.value; });
@@ -598,52 +596,6 @@ function buildForm() {
   var otherT=el("textarea",{className:"i-input i-textarea"});
   otherT.value=f.otherNotes; otherT.placeholder="設備の異常、原材料の状況など";
   otherT.addEventListener("input",function(e){ S.form.otherNotes=e.target.value; });
-  // ホワイトボード画像アップロード
-  var wbPreview = el("div",{style:{marginTop:"8px"}});
-  // 編集モードで既存画像があれば表示
-  if (f.wbImage) {
-    var existImg = el("img",{style:{width:"100%",borderRadius:"8px",maxHeight:"200px",objectFit:"contain"}});
-    existImg.src = f.wbImage;
-    wbPreview.appendChild(existImg);
-  }
-  var wbFileInput = el("input",{type:"file",accept:"image/*",style:{display:"none"},id:"wb-file-input"});
-  var wbLabel = el("label",{htmlFor:"wb-file-input",style:{display:"inline-block",padding:"10px 20px",background:"#1E3A5F",color:"#fff",borderRadius:"12px",cursor:"pointer",fontSize:"14px",fontWeight:"700"}},f.wbImage?"📷 写真を変更する":"📷 写真を選択");
-  var wbStatus = el("div",{style:{fontSize:"12px",color:"#8B6A3E",marginTop:"6px"}},f.wbImage?"✅ 画像が保存されています":"");
-  wbFileInput.addEventListener("change",function(e){
-    var file = e.target.files[0];
-    if (!file) return;
-    wbStatus.textContent = "圧縮中…";
-    compressImage(file, 800, 0.7).then(function(base64){
-      S.form.wbImage = base64;
-      wbStatus.textContent = "✅ 新しい画像を選択しました";
-      wbLabel.textContent = "📷 写真を変更する";
-      var img = el("img",{style:{width:"100%",borderRadius:"8px",marginTop:"8px",maxHeight:"200px",objectFit:"contain"}});
-      img.src = base64;
-      wbPreview.innerHTML = "";
-      wbPreview.appendChild(img);
-    });
-  });
-  // 画像削除ボタン（編集モードで既存画像がある場合）
-  var wbDeleteBtn = f.wbImage ? (function(){
-    var btn = el("button",{style:{padding:"6px 14px",background:"#fdecea",color:"#c62828",border:"1px solid #e57373",borderRadius:"8px",cursor:"pointer",fontSize:"12px",fontFamily:"inherit",marginTop:"8px"}},"🗑️ 画像を削除する");
-    btn.addEventListener("click",function(){
-      S.form.wbImage = "";
-      wbPreview.innerHTML = "";
-      wbStatus.textContent = "画像を削除しました";
-      wbLabel.textContent = "📷 写真を選択";
-      btn.style.display = "none";
-    });
-    return btn;
-  })() : el("span");
-  var wbCard = el("div",{className:"i-card"},[
-    el("div",{className:"i-card-header"},[el("span",{className:"i-shead"},"▸"),el("span",{className:"i-shead-title"},"ホワイトボード写真")]),
-    el("div",{className:"i-field"},[
-      el("label",null,"ホワイトボードの写真を撮影してください"),
-      el("div",{style:{textAlign:"center",padding:"16px 0"}},[wbFileInput, wbLabel]),
-      wbStatus, wbPreview, wbDeleteBtn
-    ])
-  ]);
-
   var submitBtn=el("button",{className:"i-submit-btn"},S.editMode?"✏️ 編集内容を確認する　→":"日報を確認する　→");
   submitBtn.addEventListener("click",function(){
     var r=JSON.parse(JSON.stringify(S.form));
@@ -666,7 +618,7 @@ function buildForm() {
       })() : el("span")
     ]),
     el("div",{className:"i-meta-row"},[
-      el("div",{className:"i-field",style:{flex:"1"}},[el("label",null,"記入者"),authorSel]),
+      el("div",{className:"i-field",style:{flex:"1"}},[el("label",null,"記入者"),authorSel,authorOtherWrap]),
       el("div",{className:"i-field",style:{flex:"1"}},[el("label",null,"製造日"),dateI])
     ]),
     batchCard("batch1","１釜目","#C0392B"),
@@ -812,7 +764,7 @@ function buildTable() {
     return el("div",{className:"m-empty"},S.loading?"読み込み中…":S.records.length===0?"まだ日報が保存されていません":"条件に合う記録がありません");
   }
   var thead=el("tr",{style:{background:"#1E3A5F"}});
-  ["製造日","記入者","１釜目","２釜目","３釜目","半製品","その他",""].forEach(function(h){ thead.appendChild(el("th",{className:"m-th"},h)); });
+  ["製造日","記入者","１釜目","２釜目","３釜目","半製品","その他","写真",""].forEach(function(h){ thead.appendChild(el("th",{className:"m-th"},h)); });
   var tbody=el("tbody");
   filtered.forEach(function(r,idx){
     var tr=el("tr",{style:{cursor:"pointer",background:idx%2===0?"#fff":"#EEF4FB"}});
@@ -831,6 +783,11 @@ function buildTable() {
     });
     tr.appendChild(el("td",{className:"m-td-clamp"},r.semiProduct||"―"));
     tr.appendChild(el("td",{className:"m-td-clamp"},r.otherNotes||"―"));
+    // 写真アイコン
+    var photoCount = (r.wbImage?1:0) + ((r.extraItems||[]).filter(function(x){return x.image;}).length);
+    var photoTd = el("td",{className:"m-td",style:{textAlign:"center",fontSize:"13px",color:"#1E3A5F"}});
+    if(photoCount>0){ photoTd.textContent = "📷"+photoCount; }
+    tr.appendChild(photoTd);
     var atd=el("td",{className:"m-td",style:{whiteSpace:"nowrap"}});
     atd.addEventListener("click",function(e){ e.stopPropagation(); });
     var vb=el("button",{className:"m-view-btn"},"詳細"); vb.addEventListener("click",function(){ S.detail=r; render(); });
@@ -904,6 +861,9 @@ function buildAdmin() {
 // ─── Detail ────────────────────────────────────────────────────
 function buildDetail() {
   var r=S.detail;
+  // 後方互換性: 古いレコードにextraItems/wbImageがない場合のデフォルト値
+  if (!r.extraItems) r.extraItems = [];
+  if (!r.wbImage) r.wbImage = "";
   var msgArea=el("div",{style:{padding:"8px 20px"}});
   function dRow(label,val){
     return el("tr",null,[
@@ -916,6 +876,8 @@ function buildDetail() {
   editBtn.addEventListener("click",function(){
     // 編集モードで入力画面を開く
     S.form = JSON.parse(JSON.stringify(S.detail));
+    if (!S.form.extraItems) S.form.extraItems = [];
+    if (!S.form.wbImage) S.form.wbImage = "";
     S.editMode = true;
     S.editId = S.detail.id;
     S.mode = "input";
@@ -1043,11 +1005,14 @@ function buildImportModal() {
 }
 
 // ─── Start ─────────────────────────────────────────────────────
-// DOMの準備完了後にレンダリング
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", function(){ render(); });
+  document.addEventListener("DOMContentLoaded", function(){
+    render();
+    if (_loggedIn) loadRecords();
+  });
 } else {
   render();
+  if (_loggedIn) loadRecords();
 }
 </script>
 </body>
